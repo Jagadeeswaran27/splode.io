@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - main
+    paths:
+      - "client/**"
+      - ".github/workflows/nightly.yml"
   workflow_dispatch:
 
 concurrency:
@@ -25,9 +28,9 @@ jobs:
       - name: Set up Java 17
         uses: actions/setup-java@v5
         with:
-          distribution: 'temurin'
-          java-version: '17'
-          cache: 'gradle'
+          distribution: "temurin"
+          java-version: "17"
+          cache: "gradle"
           cache-dependency-path: |
             client/android/*.gradle*
             client/android/app/*.gradle*
@@ -36,7 +39,7 @@ jobs:
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          channel: 'stable'
+          channel: "stable"
           cache: true
           pub-cache: true
 
