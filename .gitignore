@@ -1,0 +1,90 @@
+# ==============================================================================
+# Credentials, Secrets & Keys (STRICTLY FORBIDDEN FROM REPO)
+# ==============================================================================
+credentials/
+/credentials/
+*.env
+*.env.*
+.env
+.env.*
+*.pem
+*.key
+*.keystore
+*.jks
+*.p8
+*.p12
+*.mobileprovision
+*.cer
+**/key.properties
+**/local.properties
+**/google-services.json
+**/GoogleService-Info.plist
+*service-account*.json
+*client_secret*.json
+
+# ==============================================================================
+# Flutter / Dart Build & Dependency Artifacts
+# ==============================================================================
+**/.dart_tool/
+**/.pub-cache/
+**/.pub/
+**/build/
+**/coverage/
+**/.flutter-plugins
+**/.flutter-plugins-dependencies
+**/ios/Flutter/.last_build_id
+**/ios/Flutter/Generated.xcconfig
+**/ios/Flutter/flutter_export_environment.sh
+**/ios/Flutter/ephemeral/
+**/macos/Flutter/ephemeral/
+**/linux/flutter/ephemeral/
+**/windows/flutter/ephemeral/
+
+# Symbolication & Obfuscation
+app.*.symbols
+app.*.map.json
+
+# ==============================================================================
+# Android & Gradle
+# ==============================================================================
+**/.gradle/
+**/android/app/debug
+**/android/app/profile
+**/android/app/release
+
+# ==============================================================================
+# iOS & macOS (Xcode / CocoaPods)
+# ==============================================================================
+**/Pods/
+**/*.xcuserdatad/
+**/*.xcuserstate
+**/*.xcscmblueprint
+
+# ==============================================================================
+# IDEs & Editors
+# ==============================================================================
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+*.swp
+*.swo
+*~
+
+# ==============================================================================
+# Operating System Files
+# ==============================================================================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+ehthumbs.db
+
+# ==============================================================================
+# Logs & History
+# ==============================================================================
+*.log
+.history/
