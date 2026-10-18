@@ -1,0 +1,91 @@
+name: Nightly Build & Release
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: nightly-release
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  nightly-release:
+    name: Build & Release Nightly APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: 'gradle'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Create .env Configuration
+        working-directory: client
+        env:
+          SUPABASE_URL: ${{ secrets['SUPABASE_URL'] }}
+          SUPABASE_ANON_KEY: ${{ secrets['SUPABASE_ANON_KEY'] }}
+          GOOGLE_WEB_CLIENT_ID: ${{ secrets['GOOGLE_WEB_CLIENT_ID'] }}
+        run: |
+          cat <<EOF > .env
+          SUPABASE_URL=${SUPABASE_URL}
+          SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
+          GOOGLE_WEB_CLIENT_ID=${GOOGLE_WEB_CLIENT_ID}
+          EOF
+
+      - name: Install dependencies
+        working-directory: client
+        run: flutter pub get
+
+      - name: Run unit tests
+        working-directory: client
+        run: flutter test
+
+      - name: Build Android Release APK
+        working-directory: client
+        run: flutter build apk --release
+
+      - name: Prepare Release Artifact
+        run: |
+          cp client/build/app/outputs/flutter-apk/app-release.apk splode-nightly.apk
+
+      - name: Get current timestamp
+        id: timestamp
+        run: echo "date=$(date -u +'%Y-%m-%d %H:%M UTC')" >> $GITHUB_OUTPUT
+
+      - name: Publish Nightly Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: nightly
+          target_commitish: ${{ github.sha }}
+          name: "Nightly Build"
+          body: |
+            ## 🌙 Splode Nightly Build
+
+            This is an automated nightly build generated from the latest commit on `main`.
+
+            - **Commit**: [`${{ github.sha }}`](https://github.com/${{ github.repository }}/commit/${{ github.sha }})
+            - **Built on**: ${{ steps.timestamp.outputs.date }}
+            - **Branch**: `main`
+
+            ### 📦 Downloads
+            - **Android APK**: Download [`splode-nightly.apk`](https://github.com/${{ github.repository }}/releases/download/nightly/splode-nightly.apk) to install directly on your Android device.
+          prerelease: true
+          make_latest: false
+          files: |
+            splode-nightly.apk

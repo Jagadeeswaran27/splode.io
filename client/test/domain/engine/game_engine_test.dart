@@ -48,7 +48,7 @@ void main() {
       // p1 plays 0,0 again. Critical mass is 2. It should explode!
       final steps = GameEngine.processMove(state, 0, 0, 'p1');
 
-      expect(steps.length, 2); // 1. Initial placement (2 orbs). 2. Explosion
+      expect(steps.length, 3); // 1. Initial placement (2 orbs). 2. In-flight. 3. Landed (neighbors receive orbs)
       final finalState = steps.last;
 
       // 0,0 should have 0 orbs and no owner
