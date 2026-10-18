@@ -23,17 +23,22 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Set up Java 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: 'temurin'
           java-version: '17'
           cache: 'gradle'
+          cache-dependency-path: |
+            client/android/*.gradle*
+            client/android/app/*.gradle*
+            client/android/gradle/wrapper/gradle-wrapper.properties
 
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
           cache: true
+          pub-cache: true
 
       - name: Create .env Configuration
         working-directory: client
