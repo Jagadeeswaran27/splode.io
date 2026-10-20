@@ -231,17 +231,9 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                                       } catch (e) {
                                         if (context.mounted) {
                                           setState(() => _loadingAction = null);
-                                          final errStr = e
-                                              .toString()
-                                              .toLowerCase();
-                                          if (errStr.contains('canceled') ||
-                                              errStr.contains('cancelled')) {
-                                            return;
-                                          }
                                           SplodeSnackbar.show(
                                             context: context,
-                                            message:
-                                                'Google Sign-In failed: $e',
+                                            message: 'Google Sign-In failed: $e',
                                             type: SnackbarType.error,
                                           );
                                         }
@@ -322,7 +314,17 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                           ],
                         ),
 
-                        const SizedBox(height: 40),
+                        const SizedBox(height: 16),
+                        Text(
+                          'v0.1.0 (build 2)',
+                          style: GoogleFonts.inter(
+                            fontSize: 10,
+                            color: Colors.white.withValues(alpha: 0.2),
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+
+                        const SizedBox(height: 24),
                       ],
                     ),
                   ),
