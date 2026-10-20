@@ -1,4 +1,4 @@
-name: Nightly Build & Release
+name: Build & Release Splode APK
 
 on:
   push:
@@ -6,49 +6,43 @@ on:
       - main
     paths:
       - "client/**"
-      - ".github/workflows/nightly.yml"
+      - ".github/workflows/**"
   workflow_dispatch:
 
 concurrency:
-  group: nightly-release
+  group: release-apk
   cancel-in-progress: true
 
-permissions:
-  contents: write
+env:
+  ACTIONS_ALLOW_USE_UNSECURE_NODE20: "true"
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
 jobs:
-  nightly-release:
-    name: Build & Release Nightly APK
+  analyze_and_test:
+    name: Analyze & Test
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout repository
+      - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Set up Java 17
-        uses: actions/setup-java@v5
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
         with:
           distribution: "temurin"
           java-version: "17"
-          cache: "gradle"
-          cache-dependency-path: |
-            client/android/*.gradle*
-            client/android/app/*.gradle*
-            client/android/gradle/wrapper/gradle-wrapper.properties
 
-      - name: Set up Flutter
+      - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
           channel: "stable"
           cache: true
-          pub-cache: true
 
-      - name: Create .env Configuration
+      - name: Restore .env File
         working-directory: client
         env:
-          SUPABASE_URL: ${{ secrets['SUPABASE_URL'] }}
-          SUPABASE_ANON_KEY: ${{ secrets['SUPABASE_ANON_KEY'] }}
-          GOOGLE_WEB_CLIENT_ID: ${{ secrets['GOOGLE_WEB_CLIENT_ID'] }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          GOOGLE_WEB_CLIENT_ID: ${{ secrets.GOOGLE_WEB_CLIENT_ID }}
         run: |
           cat <<EOF > .env
           SUPABASE_URL=${SUPABASE_URL}
@@ -56,54 +50,97 @@ jobs:
           GOOGLE_WEB_CLIENT_ID=${GOOGLE_WEB_CLIENT_ID}
           EOF
 
-      - name: Install dependencies
+      - name: Install Dependencies
         working-directory: client
         run: flutter pub get
 
-      - name: Run unit tests
+      - name: Run Static Analysis
+        working-directory: client
+        run: dart analyze lib/
+
+      - name: Run Unit Tests
         working-directory: client
         run: flutter test
 
-      - name: Configure Android Signing Keystore
-        env:
-          DEBUG_KEYSTORE_BASE64: ${{ secrets['DEBUG_KEYSTORE_BASE64'] }}
-        run: |
-          mkdir -p ~/.android
-          mkdir -p client/android/app
-          echo "$DEBUG_KEYSTORE_BASE64" | base64 -d > client/android/app/keystore.jks
-          cp client/android/app/keystore.jks ~/.android/debug.keystore
-          keytool -list -v -keystore client/android/app/keystore.jks -alias androiddebugkey -storepass android -keypass android | grep "SHA1:"
+  build_and_release:
+    name: Build & Publish Release APK
+    needs: analyze_and_test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
 
-      - name: Build Android Release APK
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: "temurin"
+          java-version: "17"
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: "stable"
+          cache: true
+
+      - name: Restore Android Keystore & Config
+        env:
+          KEYSTORE_BASE64: ${{ secrets.DEBUG_KEYSTORE_BASE64 }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          GOOGLE_WEB_CLIENT_ID: ${{ secrets.GOOGLE_WEB_CLIENT_ID }}
+        run: |
+          # 1. Decode Keystore
+          mkdir -p client/android/app
+          echo "$KEYSTORE_BASE64" | base64 -d > client/android/app/upload-keystore.jks
+
+          # 2. Write key.properties
+          cat <<EOF > client/android/key.properties
+          storePassword=android
+          keyPassword=android
+          keyAlias=androiddebugkey
+          storeFile=upload-keystore.jks
+          EOF
+
+          # 3. Write client/.env
+          cat <<EOF > client/.env
+          SUPABASE_URL=${SUPABASE_URL}
+          SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
+          GOOGLE_WEB_CLIENT_ID=${GOOGLE_WEB_CLIENT_ID}
+          EOF
+
+      - name: Install Dependencies
+        working-directory: client
+        run: flutter pub get
+
+      - name: Build Release APK
         working-directory: client
         run: flutter build apk --release
 
-      - name: Prepare Release Artifact
+      - name: Prepare Release Artifacts
         run: |
-          cp client/build/app/outputs/flutter-apk/app-release.apk splode-nightly.apk
+          cp client/build/app/outputs/flutter-apk/app-release.apk splode-v0.1.0-b${{ github.run_number }}.apk
 
-      - name: Get current timestamp
-        id: timestamp
-        run: echo "date=$(date -u +'%Y-%m-%d %H:%M UTC')" >> $GITHUB_OUTPUT
-
-      - name: Publish Nightly Release
+      - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: nightly
-          target_commitish: ${{ github.sha }}
-          name: "Nightly Build"
+          tag_name: "latest"
+          name: "Splode Latest Build (Run #${{ github.run_number }})"
           body: |
-            ## 🌙 Splode Nightly Build
+            Automated build updated on commit `${{ github.sha }}`.
 
-            This is an automated nightly build generated from the latest commit on `main`.
+            - **Built on**: $(date -u +'%Y-%m-%d %H:%M UTC')
+            - **Run Number**: #${{ github.run_number }}
 
-            - **Commit**: [`${{ github.sha }}`](https://github.com/${{ github.repository }}/commit/${{ github.sha }})
-            - **Built on**: ${{ steps.timestamp.outputs.date }}
-            - **Branch**: `main`
-
-            ### 📦 Downloads
-            - **Android APK**: Download [`splode-nightly.apk`](https://github.com/${{ github.repository }}/releases/download/nightly/splode-nightly.apk) to install directly on your Android device.
-          prerelease: true
-          make_latest: false
+            ### Included Artifacts
+            - `app-release.apk` (Signed Release Build)
+            - `splode-v0.1.0-b${{ github.run_number }}.apk` (Unique build-numbered APK)
+          draft: false
+          prerelease: false
           files: |
-            splode-nightly.apk
+            client/build/app/outputs/flutter-apk/app-release.apk
+            splode-v0.1.0-b${{ github.run_number }}.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

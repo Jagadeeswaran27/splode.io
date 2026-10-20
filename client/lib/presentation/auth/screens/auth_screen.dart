@@ -316,11 +316,12 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
 
                         const SizedBox(height: 16),
                         Text(
-                          'v0.1.0 (build 2)',
+                          'v0.1.0 (build 3)',
                           style: GoogleFonts.inter(
-                            fontSize: 10,
-                            color: Colors.white.withValues(alpha: 0.2),
-                            letterSpacing: 0.5,
+                            fontSize: 12,
+                            color: _amberLight.withValues(alpha: 0.6),
+                            letterSpacing: 1.0,
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
 
