@@ -1,6 +1,7 @@
 import 'package:equatable/equatable.dart';
 
 class TutorialStep extends Equatable {
+  final String? headline;
   final String message;
   final int targetRow;
   final int targetCol;
@@ -11,6 +12,7 @@ class TutorialStep extends Equatable {
   final String expectedPlayer;
 
   const TutorialStep({
+    this.headline,
     required this.message,
     required this.targetRow,
     required this.targetCol,
@@ -18,5 +20,11 @@ class TutorialStep extends Equatable {
   });
 
   @override
-  List<Object?> get props => [message, targetRow, targetCol, expectedPlayer];
+  List<Object?> get props => [
+        headline,
+        message,
+        targetRow,
+        targetCol,
+        expectedPlayer,
+      ];
 }

@@ -11,6 +11,7 @@ import 'package:client/domain/models/match_config.dart';
 import 'package:client/presentation/core/utils/splode_snackbar.dart';
 import 'package:client/presentation/core/widgets/auth_button.dart';
 import 'package:client/presentation/core/widgets/constellation_background.dart';
+import 'package:client/presentation/core/widgets/splode_app_bar.dart';
 import 'package:client/presentation/game/providers/game_provider.dart';
 
 const List<Color> kPlayerColors = [
@@ -151,23 +152,7 @@ class _OfflineMatchSetupScreenState
     return Scaffold(
       extendBodyBehindAppBar: true,
       backgroundColor: const Color(0xFF111111),
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => context.pop(),
-        ),
-        title: Text(
-          'Match Setup',
-          style: GoogleFonts.outfit(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-            letterSpacing: 2,
-          ),
-        ),
-        centerTitle: true,
-      ),
+      appBar: const SplodeAppBar(title: 'MATCH SETUP'),
       body: Stack(
         fit: StackFit.expand,
         children: [

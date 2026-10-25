@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -7,6 +8,7 @@ import 'package:intl/intl.dart';
 import 'package:client/presentation/auth/providers/auth_provider.dart';
 import 'package:client/presentation/auth/providers/profile_provider.dart';
 import 'package:client/presentation/core/widgets/constellation_background.dart';
+import 'package:client/presentation/core/widgets/splode_app_bar.dart';
 import 'package:client/presentation/game/providers/bot_history_provider.dart';
 import 'package:client/presentation/game/services/bot_history_service.dart';
 
@@ -18,15 +20,24 @@ class ProfileScreen extends ConsumerWidget {
     final historyAsync = ref.watch(botMatchHistoryProvider);
 
     return Scaffold(
+      extendBodyBehindAppBar: true,
       backgroundColor: const Color(0xFF111111),
+      appBar: SplodeAppBar(
+        title: 'PROFILE',
+        actions: [
+          _buildLogoutButton(context, ref),
+          const SizedBox(width: 8),
+        ],
+      ),
       body: Stack(
+        fit: StackFit.expand,
         children: [
           const ConstellationBackground(),
           SafeArea(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildHeader(context, ref),
+                const SizedBox(height: 8),
                 _buildProfileSection(context, ref),
                 Padding(
                   padding: const EdgeInsets.only(left: 32, top: 24, bottom: 8),
@@ -69,108 +80,86 @@ class ProfileScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildHeader(BuildContext context, WidgetRef ref) {
-    return Padding(
-      padding: const EdgeInsets.all(24),
-      child: Row(
-        children: [
-          IconButton(
-            onPressed: () => context.pop(),
-            icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
-          ),
-          const SizedBox(width: 16),
-          Text(
-            'PROFILE',
-            style: GoogleFonts.outfit(
-              fontSize: 24,
-              fontWeight: FontWeight.w900,
-              color: const Color(0xFFD4A44C),
-              letterSpacing: 8,
-            ),
-          ),
-          const Spacer(),
-          Consumer(
-            builder: (context, ref, child) {
-              final profileAsync = ref.watch(userProfileProvider);
-              final isGuest = profileAsync.valueOrNull?.isGuest ?? false;
+  Widget _buildLogoutButton(BuildContext context, WidgetRef ref) {
+    return Consumer(
+      builder: (context, ref, child) {
+        final profileAsync = ref.watch(userProfileProvider);
+        final isGuest = profileAsync.valueOrNull?.isGuest ?? false;
 
-              return IconButton(
-                icon: const Icon(
-                  Icons.logout_rounded,
-                  color: Colors.white70,
-                ),
-                onPressed: () async {
-                  if (isGuest) {
-                    final confirm = await showDialog<bool>(
-                      context: context,
-                      builder: (context) {
-                        return AlertDialog(
-                          backgroundColor: const Color(0xFF1A1A1A),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
-                            side: BorderSide(
-                              color: Colors.red.withValues(alpha: 0.3),
-                              width: 1,
-                            ),
+        return IconButton(
+          icon: const Icon(
+            Icons.logout_rounded,
+            color: Colors.white70,
+          ),
+          onPressed: () async {
+            if (isGuest) {
+              final confirm = await showDialog<bool>(
+                context: context,
+                builder: (context) {
+                  return AlertDialog(
+                    backgroundColor: const Color(0xFF1A1A1A),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      side: BorderSide(
+                        color: Colors.red.withValues(alpha: 0.3),
+                        width: 1,
+                      ),
+                    ),
+                    title: Row(
+                      children: [
+                        const Icon(
+                          Icons.warning_amber_rounded,
+                          color: Colors.redAccent,
+                        ),
+                        const SizedBox(width: 12),
+                        Text(
+                          'Warning',
+                          style: GoogleFonts.outfit(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
                           ),
-                          title: Row(
-                            children: [
-                              const Icon(
-                                Icons.warning_amber_rounded,
-                                color: Colors.redAccent,
-                              ),
-                              const SizedBox(width: 12),
-                              Text(
-                                'Warning',
-                                style: GoogleFonts.outfit(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ],
+                        ),
+                      ],
+                    ),
+                    content: Text(
+                      'You are playing as a Guest. Logging out will permanently delete your progress. Are you sure you want to log out?',
+                      style: GoogleFonts.inter(
+                        color: Colors.white70,
+                        height: 1.5,
+                      ),
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => context.pop(false),
+                        child: Text(
+                          'CANCEL',
+                          style: GoogleFonts.outfit(
+                            color: Colors.white70,
+                            fontWeight: FontWeight.bold,
                           ),
-                          content: Text(
-                            'You are playing as a Guest. Logging out will permanently delete your progress. Are you sure you want to log out?',
-                            style: GoogleFonts.inter(
-                              color: Colors.white70,
-                              height: 1.5,
-                            ),
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: () => context.pop(true),
+                        child: Text(
+                          'LOGOUT',
+                          style: GoogleFonts.outfit(
+                            color: Colors.redAccent,
+                            fontWeight: FontWeight.bold,
                           ),
-                          actions: [
-                            TextButton(
-                              onPressed: () => context.pop(false),
-                              child: Text(
-                                'CANCEL',
-                                style: GoogleFonts.outfit(
-                                  color: Colors.white70,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                            TextButton(
-                              onPressed: () => context.pop(true),
-                              child: Text(
-                                'LOGOUT',
-                                style: GoogleFonts.outfit(
-                                  color: Colors.redAccent,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                          ],
-                        );
-                      },
-                    );
-                    if (confirm != true) return;
-                  }
-
-                  await ref.read(authLogicProvider).signOut();
+                        ),
+                      ),
+                    ],
+                  );
                 },
               );
-            },
-          ),
-        ],
-      ),
+              if (confirm != true) return;
+            }
+
+            await ref.read(authLogicProvider).signOut();
+          },
+        );
+      },
     );
   }
 

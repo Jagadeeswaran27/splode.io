@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -10,6 +11,7 @@ import 'package:client/domain/models/match_config.dart';
 import 'package:client/presentation/core/providers/connectivity_provider.dart';
 import 'package:client/presentation/core/widgets/auth_button.dart';
 import 'package:client/presentation/core/widgets/constellation_background.dart';
+import 'package:client/presentation/core/widgets/splode_app_bar.dart';
 import 'package:client/presentation/game/providers/game_provider.dart';
 import 'package:client/presentation/game/screens/offline_match_setup_screen.dart';
 
@@ -87,24 +89,7 @@ class _AiDifficultySelectionScreenState
     return Scaffold(
       extendBodyBehindAppBar: true,
       backgroundColor: const Color(0xFF111111),
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => context.pop(),
-        ),
-        title: Text(
-          'SELECT OPPONENT',
-          style: GoogleFonts.outfit(
-            color: Colors.white,
-            fontWeight: FontWeight.w900,
-            letterSpacing: 4,
-            fontSize: 14,
-          ),
-        ),
-        centerTitle: true,
-      ),
+      appBar: const SplodeAppBar(title: 'SELECT OPPONENT'),
       body: Stack(
         fit: StackFit.expand,
         children: [

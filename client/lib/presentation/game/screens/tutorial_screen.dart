@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -7,6 +8,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 import 'package:client/domain/models/match_config.dart';
 import 'package:client/presentation/core/widgets/constellation_background.dart';
+import 'package:client/presentation/core/widgets/splode_app_bar.dart';
 import 'package:client/presentation/game/providers/game_provider.dart';
 import 'package:client/presentation/game/providers/tutorial_provider.dart';
 import 'package:client/presentation/game/widgets/game_board_widget.dart';
@@ -43,6 +45,7 @@ class _TutorialScreenState extends ConsumerState<TutorialScreen> {
     );
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
       ref.read(gameStateProvider.notifier).initialize(tutorialMatchConfig);
       ref.read(tutorialProvider.notifier).loadModule(widget.moduleId);
     });
@@ -64,6 +67,8 @@ class _TutorialScreenState extends ConsumerState<TutorialScreen> {
         .read(gameStateProvider.notifier)
         .processMove(row, col);
 
+    if (!mounted) return;
+
     if (success) {
       final randomGoodMsg = [
         'Good move!',
@@ -73,6 +78,7 @@ class _TutorialScreenState extends ConsumerState<TutorialScreen> {
       ][math.Random().nextInt(4)];
       ref.read(tutorialProvider.notifier).setFeedback(randomGoodMsg);
       await Future.delayed(const Duration(milliseconds: 1400));
+      if (!mounted) return;
       ref.read(tutorialProvider.notifier).advanceStep();
     } else {
       ref.read(tutorialProvider.notifier).setProcessing(false);
@@ -82,12 +88,14 @@ class _TutorialScreenState extends ConsumerState<TutorialScreen> {
   String? getNextTutorialId(String current) {
     if (current == 'basics') return 'capturing';
     if (current == 'capturing') return 'chain_reactions';
+    if (current == 'chain_reactions') return 'edges_and_corners';
     return null;
   }
 
   String? getNextTutorialName(String current) {
     if (current == 'basics') return 'Capturing';
     if (current == 'capturing') return 'Chain Reactions';
+    if (current == 'chain_reactions') return 'Edges and Corners';
     return null;
   }
 
@@ -98,7 +106,9 @@ class _TutorialScreenState extends ConsumerState<TutorialScreen> {
     final step = tutorialState.currentStep;
 
     return Scaffold(
+      extendBodyBehindAppBar: true,
       backgroundColor: const Color(0xFF111111),
+      appBar: const SplodeAppBar(title: 'HOW TO PLAY'),
       body: Stack(
         fit: StackFit.expand,
         children: [
@@ -110,10 +120,9 @@ class _TutorialScreenState extends ConsumerState<TutorialScreen> {
             child: LayoutBuilder(
               builder: (context, constraints) {
                 final showMascot = step != null;
-                const mascotHeight = 175.0;
-                // AppBar approx height = 48
+                const mascotHeight = 118.0;
                 final availableHForBoard =
-                    constraints.maxHeight - 48 - (showMascot ? mascotHeight : 0);
+                    constraints.maxHeight - (showMascot ? mascotHeight : 0);
                 final cellW = (constraints.maxWidth - 32) / liveState.cols;
                 final cellH = (availableHForBoard - 32) / liveState.rows;
                 final cellSize = math.min(cellW, cellH);
@@ -126,9 +135,6 @@ class _TutorialScreenState extends ConsumerState<TutorialScreen> {
 
                 return Column(
                   children: [
-                    // Custom AppBar (full width)
-                    _TutorialAppBar(onBack: () => context.pop()),
-
                     // Center the Board and Mascot together
                     Expanded(
                       child: Center(
@@ -137,6 +143,21 @@ class _TutorialScreenState extends ConsumerState<TutorialScreen> {
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
+                              if (showMascot)
+                                SizedBox(
+                                  height: mascotHeight,
+                                  child: LumiMascot(
+                                    headline: isFeedback
+                                        ? 'EXCELLENT!'
+                                        : step.headline,
+                                    message: displayMessage,
+                                    stepIndex: tutorialState.stepIndex,
+                                    totalSteps: tutorialState.totalSteps,
+                                    isFeedback: isFeedback,
+                                    onNextPressed: onNext,
+                                    nextButtonLabel: nextLabel,
+                                  ),
+                                ),
                               Expanded(
                                 child: GameBoardWidget(
                                   gameState: liveState,
@@ -149,18 +170,6 @@ class _TutorialScreenState extends ConsumerState<TutorialScreen> {
                                   },
                                 ),
                               ),
-                              if (showMascot)
-                                SizedBox(
-                                  height: mascotHeight,
-                                  child: LumiMascot(
-                                    message: displayMessage,
-                                    stepIndex: tutorialState.stepIndex,
-                                    totalSteps: tutorialState.totalSteps,
-                                    isFeedback: isFeedback,
-                                    onNextPressed: onNext,
-                                    nextButtonLabel: nextLabel,
-                                  ),
-                                ),
                             ],
                           ),
                         ),
@@ -190,56 +199,6 @@ class _TutorialScreenState extends ConsumerState<TutorialScreen> {
   }
 }
 
-// ─────────────────────── App Bar ───────────────────────
-
-class _TutorialAppBar extends StatelessWidget {
-  final VoidCallback onBack;
-
-  const _TutorialAppBar({required this.onBack});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      child: Row(
-        children: [
-          IconButton(
-            icon: const Icon(
-              Icons.close_rounded,
-              color: Colors.white60,
-              size: 24,
-            ),
-            onPressed: onBack,
-          ),
-          const Spacer(),
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(
-                Icons.school_rounded,
-                color: Color(0xFFD4A44C),
-                size: 18,
-              ),
-              const SizedBox(width: 8),
-              Text(
-                'HOW TO PLAY',
-                style: GoogleFonts.outfit(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: 4,
-                  fontSize: 14,
-                ),
-              ),
-            ],
-          ),
-          const Spacer(),
-          const SizedBox(width: 48),
-        ],
-      ),
-    );
-  }
-}
-
 class _TutorialCompleteOverlay extends ConsumerWidget {
   final String moduleId;
   final Function(String?) onNext;
@@ -262,7 +221,16 @@ class _TutorialCompleteOverlay extends ConsumerWidget {
       nextId = 'chain_reactions';
       nextName = 'Chain Reactions';
     } else if (moduleId == 'chain_reactions') {
+      nextId = 'edges_and_corners';
+      nextName = 'Edges and Corners';
+    } else if (moduleId == 'edges_and_corners') {
       nextId = null;
+    }
+
+    String completeSubtitle = 'You have mastered this module!';
+    if (moduleId == 'edges_and_corners') {
+      completeSubtitle =
+          "You've mastered the high ground! Lock down corners early, use edges to flank, and let the center come to you.";
     }
 
     return Container(
@@ -291,7 +259,7 @@ class _TutorialCompleteOverlay extends ConsumerWidget {
               ),
               const SizedBox(height: 12),
               Text(
-                'You have mastered this module!',
+                completeSubtitle,
                 style: GoogleFonts.inter(
                   color: Colors.white70,
                   fontSize: 16,

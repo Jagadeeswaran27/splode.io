@@ -1,16 +1,18 @@
 import 'dart:ui' as dart_ui;
 
 import 'package:flutter/material.dart';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import 'package:client/presentation/core/providers/audio_provider.dart';
-import 'package:client/presentation/game/providers/game_provider.dart';
 import 'package:client/domain/models/match_config.dart';
+import 'package:client/presentation/core/providers/audio_provider.dart';
+import 'package:client/presentation/core/widgets/auth_button.dart';
+import 'package:client/presentation/core/widgets/splode_app_bar.dart';
+import 'package:client/presentation/game/providers/game_provider.dart';
 import 'package:client/presentation/game/widgets/game_board_widget.dart';
 import 'package:client/presentation/game/widgets/move_history_bottom_sheet.dart';
-import 'package:client/presentation/core/widgets/auth_button.dart';
 
 /// The local match screen — now powered entirely by Flutter widgets
 /// instead of the Flame engine.
@@ -143,22 +145,17 @@ class _LocalMatchScreenState extends ConsumerState<LocalMatchScreen>
       },
       child: Scaffold(
         backgroundColor: const Color(0xFF111111),
-        appBar: AppBar(
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back, color: Colors.white),
-            onPressed: () async {
-              if (canExitWithoutPrompt) {
+        appBar: SplodeAppBar(
+          onBack: () async {
+            if (canExitWithoutPrompt) {
+              context.pop();
+            } else {
+              final shouldExit = await showExitDialog();
+              if (shouldExit && context.mounted) {
                 context.pop();
-              } else {
-                final shouldExit = await showExitDialog();
-                if (shouldExit && context.mounted) {
-                  context.pop();
-                }
               }
-            },
-          ),
+            }
+          },
           actions: [
             IconButton(
               icon: const Icon(Icons.history_rounded, color: Colors.white),
@@ -172,34 +169,9 @@ class _LocalMatchScreenState extends ConsumerState<LocalMatchScreen>
             ),
             const SizedBox(width: 8),
           ],
-          title: Builder(
-            builder: (context) {
-              final isBotMatch = matchConfig.players.any((p) => p.isAi);
-              return Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    isBotMatch
-                        ? Icons.smart_toy_rounded
-                        : Icons.people_alt_rounded,
-                    color: const Color(0xFFD4A44C),
-                    size: 18,
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    isBotMatch ? 'BOT MATCH' : 'LOCAL MATCH',
-                    style: GoogleFonts.outfit(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 4,
-                      fontSize: 16,
-                    ),
-                  ),
-                ],
-              );
-            },
-          ),
-          centerTitle: true,
+          title: matchConfig.players.any((p) => p.isAi)
+              ? 'BOT MATCH'
+              : 'LOCAL MATCH',
         ),
         body: Stack(
           children: [

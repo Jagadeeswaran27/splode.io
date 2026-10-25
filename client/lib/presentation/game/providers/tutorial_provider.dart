@@ -1,50 +1,108 @@
 import 'dart:math' as math;
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import 'package:client/domain/models/cell.dart';
 import 'package:client/domain/models/tutorial_step.dart';
 import 'package:client/presentation/game/providers/game_provider.dart';
-import 'package:client/domain/models/cell.dart';
 
 List<TutorialStep> getStepsForModule(String moduleId) {
+  if (moduleId == 'edges_and_corners') {
+    return [
+      // Phase 1: The Corner Fortress (Steps 0-2)
+      const TutorialStep(
+        headline: "Strike first from the corner!",
+        message: "Corners explode at only 2 orbs. Detonate before their adjacent edge reaches critical mass.",
+        targetRow: 0,
+        targetCol: 0,
+        expectedPlayer: 'p1',
+      ),
+      const TutorialStep(
+        headline: "Fortify your left flank.",
+        message: "Your counter-blast re-armed the corner and captured the edge. Now fortify the side edge.",
+        targetRow: 1,
+        targetCol: 0,
+        expectedPlayer: 'p1',
+      ),
+      const TutorialStep(
+        headline: "Detonate into the center!",
+        message: "Center cells take 4 orbs to burst—far too slow against your primed perimeter flank.",
+        targetRow: 1,
+        targetCol: 0,
+        expectedPlayer: 'p1',
+      ),
+      // Phase 2: The Perimeter Highway (Steps 3-5)
+      const TutorialStep(
+        headline: "Prime the Perimeter Highway.",
+        message: "Never attack center defenses head-on. Edges burst at 3 orbs. Prime the top route.",
+        targetRow: 0,
+        targetCol: 1,
+        expectedPlayer: 'p1',
+      ),
+      const TutorialStep(
+        headline: "Extend the highway.",
+        message: "Prime the next edge along the perimeter to connect your route straight to their corner.",
+        targetRow: 0,
+        targetCol: 4,
+        expectedPlayer: 'p1',
+      ),
+      const TutorialStep(
+        headline: "Unleash the perimeter wave!",
+        message: "Detonate your corner to trigger a massive cascade and sweep their defenses from behind.",
+        targetRow: 0,
+        targetCol: 0,
+        expectedPlayer: 'p1',
+      ),
+    ];
+  }
+
   if (moduleId == 'chain_reactions') {
     return [
       const TutorialStep(
-        message: "Chain reactions are the key to victory! First, build up your cell to capture the enemy ahead.",
+        headline: "Build your launchpad.",
+        message: "Chain reactions win matches. Add an orb to prepare an attack on the enemy ahead.",
         targetRow: 7,
         targetCol: 1,
         expectedPlayer: 'p1',
       ),
       const TutorialStep(
-        message: "Trigger the explosion to take over their cell and build your path.",
+        headline: "Trigger the first blast.",
+        message: "Explode your cell to convert the enemy orb and open your path forward.",
         targetRow: 7,
         targetCol: 1,
         expectedPlayer: 'p1',
       ),
       const TutorialStep(
-        message: "Perfect! Now explode this newly captured cell to advance further up the board.",
+        headline: "Advance up the board.",
+        message: "Detonate your newly captured cell to push deeper into their territory.",
         targetRow: 6,
         targetCol: 1,
         expectedPlayer: 'p1',
       ),
       const TutorialStep(
-        message: "The enemy has a massive, unstable cluster above. This is the moment—trigger the final explosion!",
+        headline: "Trigger critical mass!",
+        message: "The enemy has an unstable cluster above. Ignite it with one final explosion.",
         targetRow: 5,
         targetCol: 1,
         expectedPlayer: 'p1',
       ),
       const TutorialStep(
-        message: "That was the S-Curve! Now let's try the Whirlpool. Build the fuse at the bottom left.",
+        headline: "The Whirlpool: Build fuse.",
+        message: "Add an orb to the bottom-left cell to start building an inward spiral.",
         targetRow: 8,
         targetCol: 2,
         expectedPlayer: 'p1',
       ),
       const TutorialStep(
-        message: "Capture the adjacent cell to complete the fuse.",
+        headline: "Arm the adjacent cell.",
+        message: "Capture the neighboring cell to complete the domino fuse.",
         targetRow: 8,
         targetCol: 2,
         expectedPlayer: 'p1',
       ),
       const TutorialStep(
-        message: "Trigger it! Watch closely as the chain reaction coils all the way to the center.",
+        headline: "Detonate the Whirlpool!",
+        message: "Watch the chain reaction coil inward and detonate all the way to the center.",
         targetRow: 8,
         targetCol: 1,
         expectedPlayer: 'p1',
@@ -55,43 +113,50 @@ List<TutorialStep> getStepsForModule(String moduleId) {
   if (moduleId == 'capturing') {
     return [
       const TutorialStep(
-        message: "You're outnumbered! Start by building up your base to prepare an attack.",
+        headline: "Prepare your attack.",
+        message: "You're outnumbered! Place an orb in your base to build toward critical mass.",
         targetRow: 4,
         targetCol: 1,
         expectedPlayer: 'p1',
       ),
       const TutorialStep(
-        message: "Critical mass reached! Tap it to explode and capture the adjacent enemy orb.",
+        headline: "Capture adjacent orb.",
+        message: "Critical mass reached! Tap to explode and convert the enemy orb to your team.",
         targetRow: 4,
         targetCol: 1,
         expectedPlayer: 'p1',
       ),
       const TutorialStep(
-        message: "Great capture! Build up your new cell to continue the attack.",
+        headline: "Reinforce captured cell.",
+        message: "Great capture! Build up your new cell to continue driving forward.",
         targetRow: 4,
         targetCol: 2,
         expectedPlayer: 'p1',
       ),
       const TutorialStep(
-        message: "They are building up a strong defense! Explode your cell to push through.",
+        headline: "Push through defense.",
+        message: "They are fortifying nearby. Detonate your cell to break through their line.",
         targetRow: 4,
         targetCol: 2,
         expectedPlayer: 'p1',
       ),
       const TutorialStep(
-        message: "Your newly captured cell is almost at critical mass. One tap will trigger it!",
+        headline: "Ignite frontline cell.",
+        message: "Your new cell is at critical mass. One tap will trigger the next explosion.",
         targetRow: 4,
         targetCol: 3,
         expectedPlayer: 'p1',
       ),
       const TutorialStep(
-        message: "The enemy has heavy defenses ahead. Build up your front line cell.",
+        headline: "Fortify the frontline.",
+        message: "Enemy defenses are heavy ahead. Place an orb to arm your forward post.",
         targetRow: 4,
         targetCol: 4,
         expectedPlayer: 'p1',
       ),
       const TutorialStep(
-        message: "This is it! One more tap will trigger a MASSIVE chain reaction and wipe them out.",
+        headline: "Trigger final wipeout!",
+        message: "One more tap will ignite a massive wave and clear the board.",
         targetRow: 4,
         targetCol: 4,
         expectedPlayer: 'p1',
@@ -103,25 +168,29 @@ List<TutorialStep> getStepsForModule(String moduleId) {
   return [
     // SECTION 1: CENTER CELL
     const TutorialStep(
-      message: "Welcome to Splode! Let's learn about Critical Mass. Tap the highlighted center cell.",
+      headline: "Tap the center cell.",
+      message: "Welcome to Splode! Learn critical mass by tapping the highlighted center cell.",
       targetRow: 4,
       targetCol: 2,
       expectedPlayer: 'p1',
     ),
     const TutorialStep(
-      message: 'Center cells have 4 neighbors, so they need 4 orbs to explode. Tap it again.',
+      headline: "Build to 4 orbs.",
+      message: "Center cells have 4 neighbors, so they require 4 orbs to explode. Tap again.",
       targetRow: 4,
       targetCol: 2,
       expectedPlayer: 'p1',
     ),
     const TutorialStep(
-      message: 'Notice how the orb grows? Keep building it up.',
+      headline: "Watch the orb charge.",
+      message: "Notice how the orb vibrates and grows as it gets closer to bursting.",
       targetRow: 4,
       targetCol: 2,
       expectedPlayer: 'p1',
     ),
     const TutorialStep(
-      message: 'One more orb will cause an EXPLOSION! Watch it expand into adjacent cells.',
+      headline: "Trigger the explosion!",
+      message: "One more orb causes an explosion that bursts into all 4 adjacent cells.",
       targetRow: 4,
       targetCol: 2,
       expectedPlayer: 'p1',
@@ -129,13 +198,15 @@ List<TutorialStep> getStepsForModule(String moduleId) {
 
     // SECTION 2: CORNER CELL
     const TutorialStep(
-      message: "Awesome! Now let's look at corners. They only have 2 neighbors, so they explode at 2 orbs. Tap the corner.",
+      headline: "Corners need only 2 orbs.",
+      message: "Corners have only 2 neighbors, making them the fastest detonators. Tap the corner.",
       targetRow: 0,
       targetCol: 0,
       expectedPlayer: 'p1',
     ),
     const TutorialStep(
-      message: "Since it's a corner, the very next orb will cause an explosion! Try it.",
+      headline: "Explode the corner!",
+      message: "Tap once more to trigger an instant 2-way explosion along the outer borders.",
       targetRow: 0,
       targetCol: 0,
       expectedPlayer: 'p1',
@@ -143,19 +214,22 @@ List<TutorialStep> getStepsForModule(String moduleId) {
 
     // SECTION 3: EDGE CELL
     const TutorialStep(
-      message: 'Finally, edge cells have 3 neighbors, so they explode at 3 orbs. Tap the edge cell.',
+      headline: "Edges need 3 orbs.",
+      message: "Edges have 3 neighbors. Tap the highlighted edge to start building it up.",
       targetRow: 0,
       targetCol: 3,
       expectedPlayer: 'p1',
     ),
     const TutorialStep(
-      message: 'Tap it again to build it up.',
+      headline: "Charge the edge.",
+      message: "Add another orb to bring this edge cell to critical mass.",
       targetRow: 0,
       targetCol: 3,
       expectedPlayer: 'p1',
     ),
     const TutorialStep(
-      message: 'One more orb will reach its critical mass! Make it explode.',
+      headline: "Detonate the 3-way burst!",
+      message: "One more orb triggers a 3-directional shockwave into surrounding cells.",
       targetRow: 0,
       targetCol: 3,
       expectedPlayer: 'p1',
@@ -218,6 +292,8 @@ class TutorialNotifier extends StateNotifier<TutorialState> {
       _setupCapturingBoard();
     } else if (moduleId == 'chain_reactions') {
       _setupChainReactionBoard();
+    } else if (moduleId == 'edges_and_corners') {
+      _setupEdgesAndCornersBoard();
     }
   }
 
@@ -226,7 +302,7 @@ class TutorialNotifier extends StateNotifier<TutorialState> {
     final currentState = gameStateNotifier.state;
     
     // Create a fresh empty board
-    final newBoard = List.generate(9, (_) => List.generate(6, (_) => const Cell(ownerId: '', orbCount: 0)));
+    final newBoard = List.generate(9, (_) => List.generate(6, (_) => const Cell()));
 
     // The Fuse (Player 1)
     newBoard[8][2] = const Cell(ownerId: 'p1', orbCount: 2);
@@ -376,6 +452,78 @@ class TutorialNotifier extends StateNotifier<TutorialState> {
     gameStateNotifier.state = currentState.copyWith(board: newBoard);
   }
 
+  void _setupEdgesAndCornersBoard() {
+    final gameStateNotifier = _ref.read(gameStateProvider.notifier);
+    final currentState = gameStateNotifier.state;
+    final newBoard = List.generate(
+      9,
+      (_) => List.generate(6, (_) => const Cell()),
+    );
+
+    // Player holds corner [0][0] armed with 1 orb
+    newBoard[0][0] = const Cell(ownerId: 'p1', orbCount: 1);
+
+    // Enemy edge cell threatens the corner with 2 orbs
+    newBoard[0][1] = const Cell(ownerId: 'p2', orbCount: 2);
+
+    // Enemy center presence
+    newBoard[1][1] = const Cell(ownerId: 'p2', orbCount: 1);
+    newBoard[1][2] = const Cell(ownerId: 'p2', orbCount: 1);
+    newBoard[2][2] = const Cell(ownerId: 'p2', orbCount: 1);
+
+    gameStateNotifier.state = currentState.copyWith(
+      board: newBoard,
+      currentPlayerIndex: 0,
+      isGameOver: false,
+      winner: () => null,
+      turnCount: 0,
+      lastMove: () => null,
+    );
+  }
+
+  void _setupPerimeterSweepBoard() {
+    final gameStateNotifier = _ref.read(gameStateProvider.notifier);
+    final currentState = gameStateNotifier.state;
+    final newBoard = List.generate(
+      9,
+      (_) => List.generate(6, (_) => const Cell()),
+    );
+
+    // Player's top row highway:
+    // [0][0] corner detonator (1 orb)
+    newBoard[0][0] = const Cell(ownerId: 'p1', orbCount: 1);
+    // [0][1] western fuse (needs 1 orb from player to reach 2)
+    newBoard[0][1] = const Cell(ownerId: 'p1', orbCount: 1);
+    newBoard[0][2] = const Cell(ownerId: 'p1', orbCount: 2);
+    newBoard[0][3] = const Cell(ownerId: 'p1', orbCount: 2);
+    // [0][4] eastern bridgehead (needs 1 orb from player to reach 2)
+    newBoard[0][4] = const Cell(ownerId: 'p1', orbCount: 1);
+
+    // Enemy corner — swept by the cascade
+    newBoard[0][5] = const Cell(ownerId: 'p2', orbCount: 1);
+
+    // Enemy edge highway down the right side
+    newBoard[1][5] = const Cell(ownerId: 'p2', orbCount: 2);
+    newBoard[2][5] = const Cell(ownerId: 'p2', orbCount: 2);
+    newBoard[3][5] = const Cell(ownerId: 'p2', orbCount: 2);
+    newBoard[4][5] = const Cell(ownerId: 'p2', orbCount: 2);
+
+    // Enemy center stronghold
+    newBoard[1][2] = const Cell(ownerId: 'p2', orbCount: 1);
+    newBoard[1][3] = const Cell(ownerId: 'p2', orbCount: 1);
+    newBoard[2][2] = const Cell(ownerId: 'p2', orbCount: 1);
+    newBoard[2][3] = const Cell(ownerId: 'p2', orbCount: 1);
+
+    gameStateNotifier.state = currentState.copyWith(
+      board: newBoard,
+      currentPlayerIndex: 0,
+      isGameOver: false,
+      winner: () => null,
+      turnCount: 0,
+      lastMove: () => null,
+    );
+  }
+
   void setProcessing(bool processing) {
     state = TutorialState(
       moduleId: state.moduleId,
@@ -417,9 +565,11 @@ class TutorialNotifier extends StateNotifier<TutorialState> {
       isTutorialComplete: false,
     );
 
-    // If advancing to phase 2 of chain reactions, reset the board
+    // If advancing to phase 2, reset the board
     if (state.moduleId == 'chain_reactions' && state.stepIndex == 4) {
       _setupWhirlpoolBoard();
+    } else if (state.moduleId == 'edges_and_corners' && state.stepIndex == 3) {
+      _setupPerimeterSweepBoard();
     }
 
     // After player advances step, simulate bot turn based on module
@@ -449,6 +599,26 @@ class TutorialNotifier extends StateNotifier<TutorialState> {
           await _ref.read(gameStateProvider.notifier).processMove(4, 2);
         } else if (stepIdx == 6) {
           await _ref.read(gameStateProvider.notifier).processMove(3, 2);
+        }
+        setProcessing(false);
+      }
+      return;
+    }
+
+    if (state.moduleId == 'edges_and_corners') {
+      // Phase 1: bot builds center presence, demonstrating slow 4-neighbor buildup
+      // Phase 2: bot reinforces center while perimeter highway is armed
+      if (stepIdx == 1 || stepIdx == 2 || stepIdx == 4 || stepIdx == 5) {
+        setProcessing(true);
+        await Future.delayed(const Duration(milliseconds: 1000));
+        if (stepIdx == 1) {
+          await _ref.read(gameStateProvider.notifier).processMove(1, 2);
+        } else if (stepIdx == 2) {
+          await _ref.read(gameStateProvider.notifier).processMove(2, 2);
+        } else if (stepIdx == 4) {
+          await _ref.read(gameStateProvider.notifier).processMove(2, 2);
+        } else if (stepIdx == 5) {
+          await _ref.read(gameStateProvider.notifier).processMove(2, 3);
         }
         setProcessing(false);
       }
