@@ -119,10 +119,6 @@ jobs:
         working-directory: client
         run: flutter build apk --release
 
-      - name: Prepare Release Artifacts
-        run: |
-          cp client/build/app/outputs/flutter-apk/app-release.apk splode-v0.1.0-b${{ github.run_number }}.apk
-
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
@@ -131,16 +127,13 @@ jobs:
           body: |
             Automated build updated on commit `${{ github.sha }}`.
 
-            - **Built on**: $(date -u +'%Y-%m-%d %H:%M UTC')
             - **Run Number**: #${{ github.run_number }}
 
             ### Included Artifacts
             - `app-release.apk` (Signed Release Build)
-            - `splode-v0.1.0-b${{ github.run_number }}.apk` (Unique build-numbered APK)
           draft: false
           prerelease: false
           files: |
             client/build/app/outputs/flutter-apk/app-release.apk
-            splode-v0.1.0-b${{ github.run_number }}.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
