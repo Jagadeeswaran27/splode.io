@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:client/domain/engine/game_engine.dart';
 import 'package:client/domain/models/cell.dart';
 import 'package:client/domain/models/game_state.dart';
+import 'package:client/domain/models/tutorial_module.dart';
 import 'package:client/presentation/game/providers/game_provider.dart';
 import 'package:client/presentation/game/providers/tutorial_provider.dart';
 
@@ -212,6 +213,80 @@ void main() {
       expect(state.board[1][5].ownerId, 'p1');
       expect(state.board[2][5].ownerId, 'p1');
       expect(state.board[3][5].ownerId, 'p1');
+    });
+  });
+
+  group('Tutorial Provider Feedback & Step Progression', () {
+    test('currentStep includes baseStep.headline', () {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      final notifier = container.read(tutorialProvider.notifier);
+      notifier.loadModule(TutorialModule.capturing);
+
+      final current = container.read(tutorialProvider).currentStep;
+      expect(current?.headline, 'Prepare your attack.');
+      expect(current?.targetRow, 4);
+      expect(current?.targetCol, 1);
+    });
+
+    test('advanceStep clears feedback message and resets processing flag', () {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      final notifier = container.read(tutorialProvider.notifier);
+      notifier.loadModule(TutorialModule.capturing);
+
+      // Simulate move feedback
+      notifier.setFeedback('Nice! Right on target!');
+      expect(
+        container.read(tutorialProvider).feedbackMessage,
+        'Nice! Right on target!',
+      );
+      // While feedback is active, target coordinates are masked (-1)
+      expect(container.read(tutorialProvider).currentStep?.targetRow, -1);
+
+      // Advance step
+      notifier.advanceStep();
+
+      final state = container.read(tutorialProvider);
+      expect(state.stepIndex, 1);
+      expect(state.feedbackMessage, isNull);
+    });
+
+    test('setFeedback(null) explicitly clears feedbackMessage', () {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      final notifier = container.read(tutorialProvider.notifier);
+      notifier.loadModule(TutorialModule.capturing);
+
+      notifier.setFeedback('Good move!');
+      expect(container.read(tutorialProvider).feedbackMessage, 'Good move!');
+
+      notifier.setFeedback(null);
+      expect(container.read(tutorialProvider).feedbackMessage, isNull);
+    });
+
+    test('Capturing module step 1 targets (4, 1) after advancing', () {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      final notifier = container.read(tutorialProvider.notifier);
+      notifier.loadModule(TutorialModule.capturing);
+
+      // Step 0
+      final step0 = container.read(tutorialProvider).currentStep;
+      expect(step0?.targetRow, 4);
+      expect(step0?.targetCol, 1);
+
+      // Complete step 0 & advance
+      notifier.setFeedback('Nice! Right on target!');
+      notifier.advanceStep();
+
+      final step1 = container.read(tutorialProvider).currentStep;
+      expect(step1?.headline, 'Capture adjacent orb.');
+      expect(step1?.message, contains('Critical mass reached!'));
     });
   });
 }

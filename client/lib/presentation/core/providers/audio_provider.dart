@@ -1,11 +1,10 @@
-import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
+
+import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 final audioProvider = ChangeNotifierProvider<AudioController>((ref) {
-  final controller = AudioController();
-  ref.onDispose(() => controller.dispose());
-  return controller;
+  return AudioController();
 });
 
 class AudioController extends ChangeNotifier with WidgetsBindingObserver {
@@ -82,8 +81,9 @@ class AudioController extends ChangeNotifier with WidgetsBindingObserver {
 
   @override
   void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
+    if (_isDisposed) return;
     _isDisposed = true;
+    WidgetsBinding.instance.removeObserver(this);
     _bgmPlayer.dispose();
     super.dispose();
   }

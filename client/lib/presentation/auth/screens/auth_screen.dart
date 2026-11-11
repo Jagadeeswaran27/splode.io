@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
 
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-
-import 'package:client/presentation/core/providers/audio_provider.dart';
-import 'package:client/presentation/auth/providers/auth_provider.dart';
-import 'package:client/presentation/core/widgets/auth_button.dart';
-import 'package:client/presentation/core/utils/splode_snackbar.dart';
 import 'package:client/core/config/env_config.dart';
+import 'package:client/presentation/auth/providers/auth_provider.dart';
+import 'package:client/presentation/core/providers/audio_provider.dart';
+import 'package:client/presentation/core/utils/responsive_layout.dart';
+import 'package:client/presentation/core/utils/splode_snackbar.dart';
+import 'package:client/presentation/core/widgets/auth_button.dart';
+import 'package:client/presentation/core/widgets/responsive_content_container.dart';
 
 /// The login/signup screen shown when the app first launches.
 ///
@@ -32,6 +33,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
     super.initState();
     // Start background music when the app launches and reaches this screen
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
       ref.read(audioProvider).playMenuMusic();
     });
   }
@@ -85,67 +87,77 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
               children: [
                 Center(
                   child: SingleChildScrollView(
-                    padding: const EdgeInsets.symmetric(horizontal: 32),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const SizedBox(height: 60),
-
-                        // Logo mark — a simple decorative accent
-                        Container(
-                          width: 64,
-                          height: 64,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: _amber.withValues(alpha: 0.4),
-                              width: 2,
-                            ),
+                    child: ResponsiveContentContainer(
+                      maxWidth: SplodeBreakpoints.maxFormWidth,
+                      padding: const EdgeInsets.symmetric(horizontal: 28),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          SizedBox(
+                            height: context.isShortScreen ? 20.0 : 50.0,
                           ),
-                          child: Center(
-                            child: Container(
-                              width: 24,
-                              height: 24,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: _amber.withValues(alpha: 0.6),
+
+                          // Logo mark — a simple decorative accent
+                          Container(
+                            width: context.isShortScreen ? 48.0 : 64.0,
+                            height: context.isShortScreen ? 48.0 : 64.0,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: _amber.withValues(alpha: 0.4),
+                                width: 2,
+                              ),
+                            ),
+                            child: Center(
+                              child: Container(
+                                width: context.isShortScreen ? 18.0 : 24.0,
+                                height: context.isShortScreen ? 18.0 : 24.0,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: _amber.withValues(alpha: 0.6),
+                                ),
                               ),
                             ),
                           ),
-                        ),
-                        const SizedBox(height: 32),
-
-                        // Title
-                        Text(
-                          'SPLODE.IO',
-                          style: GoogleFonts.outfit(
-                            fontSize: 44,
-                            fontWeight: FontWeight.w700,
-                            color: _cream,
-                            height: 1.1,
+                          SizedBox(
+                            height: context.isShortScreen ? 16.0 : 28.0,
                           ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'CHAIN REACTION ARENA',
-                          style: GoogleFonts.inter(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                            letterSpacing: 4,
-                            color: _amberLight.withValues(alpha: 0.6),
+
+                          // Title
+                          Text(
+                            'SPLODE.IO',
+                            style: GoogleFonts.outfit(
+                              fontSize: context.isShortScreen ? 34.0 : 44.0,
+                              fontWeight: FontWeight.w700,
+                              color: _cream,
+                              height: 1.1,
+                            ),
                           ),
-                        ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'CHAIN REACTION ARENA',
+                            style: GoogleFonts.inter(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                              letterSpacing: 4,
+                              color: _amberLight.withValues(alpha: 0.6),
+                            ),
+                          ),
 
-                        const SizedBox(height: 64),
+                          SizedBox(
+                            height: context.isShortScreen ? 24.0 : 48.0,
+                          ),
 
-                        // Divider line
-                        Container(
-                          width: 40,
-                          height: 1.5,
-                          color: _amber.withValues(alpha: 0.3),
-                        ),
+                          // Divider line
+                          Container(
+                            width: 40,
+                            height: 1.5,
+                            color: _amber.withValues(alpha: 0.3),
+                          ),
 
-                        const SizedBox(height: 48),
+                          SizedBox(
+                            height: context.isShortScreen ? 24.0 : 40.0,
+                          ),
 
                         // Auth Buttons
                         Column(
@@ -174,7 +186,9 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                                 }
                               },
                             ),
-                            const SizedBox(height: 32),
+                            SizedBox(
+                              height: context.isShortScreen ? 20.0 : 28.0,
+                            ),
                             Row(
                               children: [
                                 Expanded(
@@ -205,7 +219,9 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 32),
+                            SizedBox(
+                              height: context.isShortScreen ? 20.0 : 28.0,
+                            ),
                             Row(
                               children: [
                                 Expanded(
@@ -262,7 +278,9 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                           ],
                         ),
 
-                        const SizedBox(height: 48),
+                        SizedBox(
+                          height: context.isShortScreen ? 20.0 : 36.0,
+                        ),
 
                         // Footer
                         Text(
@@ -273,45 +291,48 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                           ),
                         ),
                         const SizedBox(height: 4),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            GestureDetector(
-                              onTap: () {},
-                              child: Text(
-                                'Terms of Service',
-                                style: GoogleFonts.inter(
-                                  fontSize: 11,
-                                  color: _amberLight.withValues(alpha: 0.5),
-                                  decoration: TextDecoration.underline,
-                                  decorationColor: _amberLight.withValues(
-                                    alpha: 0.3,
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              GestureDetector(
+                                onTap: () {},
+                                child: Text(
+                                  'Terms of Service',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 11,
+                                    color: _amberLight.withValues(alpha: 0.5),
+                                    decoration: TextDecoration.underline,
+                                    decorationColor: _amberLight.withValues(
+                                      alpha: 0.3,
+                                    ),
                                   ),
                                 ),
                               ),
-                            ),
-                            Text(
-                              '  &  ',
-                              style: GoogleFonts.inter(
-                                fontSize: 11,
-                                color: Colors.white.withValues(alpha: 0.2),
-                              ),
-                            ),
-                            GestureDetector(
-                              onTap: () {},
-                              child: Text(
-                                'Privacy Policy',
+                              Text(
+                                '  &  ',
                                 style: GoogleFonts.inter(
                                   fontSize: 11,
-                                  color: _amberLight.withValues(alpha: 0.5),
-                                  decoration: TextDecoration.underline,
-                                  decorationColor: _amberLight.withValues(
-                                    alpha: 0.3,
+                                  color: Colors.white.withValues(alpha: 0.2),
+                                ),
+                              ),
+                              GestureDetector(
+                                onTap: () {},
+                                child: Text(
+                                  'Privacy Policy',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 11,
+                                    color: _amberLight.withValues(alpha: 0.5),
+                                    decoration: TextDecoration.underline,
+                                    decorationColor: _amberLight.withValues(
+                                      alpha: 0.3,
+                                    ),
                                   ),
                                 ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
 
                         const SizedBox(height: 16),
@@ -330,8 +351,9 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                     ),
                   ),
                 ),
+              ),
 
-                // Mute Button
+              // Mute Button
                 Positioned(
                   top: 16,
                   right: 16,

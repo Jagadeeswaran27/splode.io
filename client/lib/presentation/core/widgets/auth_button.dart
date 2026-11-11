@@ -15,6 +15,9 @@ class AuthButton extends StatefulWidget {
   final VoidCallback onPressed;
   final AuthButtonStyle style;
   final bool isLoading;
+  final EdgeInsetsGeometry? padding;
+  final double? fontSize;
+  final double? iconSize;
 
   const AuthButton({
     super.key,
@@ -23,6 +26,9 @@ class AuthButton extends StatefulWidget {
     required this.onPressed,
     this.style = AuthButtonStyle.secondary,
     this.isLoading = false,
+    this.padding,
+    this.fontSize,
+    this.iconSize,
   });
 
   @override
@@ -124,15 +130,16 @@ class _AuthButtonState extends State<AuthButton>
           return Transform.scale(scale: _scaleAnimation.value, child: child);
         },
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+          padding: widget.padding ??
+              const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
           decoration: _getDecoration(),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: widget.isLoading
                 ? [
                     SizedBox(
-                      width: 22,
-                      height: 22,
+                      width: widget.iconSize ?? 22,
+                      height: widget.iconSize ?? 22,
                       child: CircularProgressIndicator(
                         strokeWidth: 2.5,
                         valueColor: AlwaysStoppedAnimation<Color>(textColor),
@@ -141,7 +148,10 @@ class _AuthButtonState extends State<AuthButton>
                   ]
                 : [
                     IconTheme(
-                      data: IconThemeData(color: textColor, size: 22),
+                      data: IconThemeData(
+                        color: textColor,
+                        size: widget.iconSize ?? 22,
+                      ),
                       child: widget.icon,
                     ),
                     const SizedBox(width: 12),
@@ -151,7 +161,7 @@ class _AuthButtonState extends State<AuthButton>
                         overflow: TextOverflow.ellipsis,
                         style: GoogleFonts.outfit(
                           color: textColor,
-                          fontSize: 16,
+                          fontSize: widget.fontSize ?? 16,
                           fontWeight: FontWeight.w600,
                           letterSpacing: 0.5,
                         ),

@@ -4,15 +4,18 @@ import 'package:flutter/material.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 import 'package:client/domain/models/match_config.dart';
+import 'package:client/domain/models/tutorial_module.dart';
+import 'package:client/presentation/core/utils/responsive_layout.dart';
 import 'package:client/presentation/core/widgets/constellation_background.dart';
+import 'package:client/presentation/core/widgets/responsive_content_container.dart';
 import 'package:client/presentation/core/widgets/splode_app_bar.dart';
 import 'package:client/presentation/game/providers/game_provider.dart';
 import 'package:client/presentation/game/providers/tutorial_provider.dart';
 import 'package:client/presentation/game/widgets/game_board_widget.dart';
 import 'package:client/presentation/game/widgets/mascot_widget.dart';
+import 'package:client/presentation/game/widgets/tutorial_complete_overlay.dart';
 
 /// A chess.com-inspired interactive tutorial screen.
 ///
@@ -21,8 +24,14 @@ import 'package:client/presentation/game/widgets/mascot_widget.dart';
 /// coach style. A subtle step progress bar sits at the very top below the
 /// AppBar. The constellation background ties it to the app's royal theme.
 class TutorialScreen extends ConsumerStatefulWidget {
-  final String moduleId;
-  const TutorialScreen({super.key, this.moduleId = 'basics'});
+  final TutorialModule module;
+
+  const TutorialScreen({
+    super.key,
+    this.module = TutorialModule.basics,
+  });
+
+  String get moduleId => module.id;
 
   @override
   ConsumerState<TutorialScreen> createState() => _TutorialScreenState();
@@ -79,6 +88,7 @@ class _TutorialScreenState extends ConsumerState<TutorialScreen> {
       ref.read(tutorialProvider.notifier).setFeedback(randomGoodMsg);
       await Future.delayed(const Duration(milliseconds: 1400));
       if (!mounted) return;
+      ref.read(tutorialProvider.notifier).setFeedback(null);
       ref.read(tutorialProvider.notifier).advanceStep();
     } else {
       ref.read(tutorialProvider.notifier).setProcessing(false);
@@ -120,7 +130,70 @@ class _TutorialScreenState extends ConsumerState<TutorialScreen> {
             child: LayoutBuilder(
               builder: (context, constraints) {
                 final showMascot = step != null;
-                const mascotHeight = 118.0;
+                const mascotHeight = 132.0;
+
+                final isFeedback = tutorialState.feedbackMessage != null;
+                final displayMessage = isFeedback
+                    ? (tutorialState.feedbackMessage ?? step?.message ?? '')
+                    : (step?.message ?? '');
+                String? nextLabel;
+                VoidCallback? onNext;
+
+                Widget buildMascot() {
+                  if (!showMascot) return const SizedBox.shrink();
+                  return SizedBox(
+                    height: mascotHeight,
+                    child: LumiMascot(
+                      headline: isFeedback ? 'EXCELLENT!' : step.headline,
+                      message: displayMessage,
+                      stepIndex: tutorialState.stepIndex,
+                      totalSteps: tutorialState.totalSteps,
+                      isFeedback: isFeedback,
+                      onNextPressed: onNext,
+                      nextButtonLabel: nextLabel,
+                    ),
+                  );
+                }
+
+                Widget buildBoard() {
+                  return GameBoardWidget(
+                    gameState: liveState,
+                    matchConfig: tutorialMatchConfig,
+                    onCellTapped: _handleCellTapped,
+                    isTutorialTarget: (row, col) {
+                      return step != null &&
+                          step.targetRow == row &&
+                          step.targetCol == col;
+                    },
+                  );
+                }
+
+                if (context.isLandscape && constraints.maxWidth >= 600) {
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        SizedBox(
+                          width: 320,
+                          child: SingleChildScrollView(
+                            child: buildMascot(),
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Center(
+                            child: buildBoard(),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+
                 final availableHForBoard =
                     constraints.maxHeight - (showMascot ? mascotHeight : 0);
                 final cellW = (constraints.maxWidth - 32) / liveState.cols;
@@ -128,50 +201,18 @@ class _TutorialScreenState extends ConsumerState<TutorialScreen> {
                 final cellSize = math.min(cellW, cellH);
                 final boardWidth = (cellSize * liveState.cols) + 32;
 
-                String displayMessage = step?.message ?? '';
-                String? nextLabel;
-                VoidCallback? onNext;
-                bool isFeedback = tutorialState.feedbackMessage != null;
-
                 return Column(
                   children: [
-                    // Center the Board and Mascot together
+                    if (showMascot)
+                      ResponsiveContentContainer(
+                        maxWidth: 520,
+                        child: buildMascot(),
+                      ),
                     Expanded(
                       child: Center(
                         child: SizedBox(
                           width: boardWidth,
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              if (showMascot)
-                                SizedBox(
-                                  height: mascotHeight,
-                                  child: LumiMascot(
-                                    headline: isFeedback
-                                        ? 'EXCELLENT!'
-                                        : step.headline,
-                                    message: displayMessage,
-                                    stepIndex: tutorialState.stepIndex,
-                                    totalSteps: tutorialState.totalSteps,
-                                    isFeedback: isFeedback,
-                                    onNextPressed: onNext,
-                                    nextButtonLabel: nextLabel,
-                                  ),
-                                ),
-                              Expanded(
-                                child: GameBoardWidget(
-                                  gameState: liveState,
-                                  matchConfig: tutorialMatchConfig,
-                                  onCellTapped: _handleCellTapped,
-                                  isTutorialTarget: (row, col) {
-                                    return step != null &&
-                                        step.targetRow == row &&
-                                        step.targetCol == col;
-                                  },
-                                ),
-                              ),
-                            ],
-                          ),
+                          child: buildBoard(),
                         ),
                       ),
                     ),
@@ -183,7 +224,7 @@ class _TutorialScreenState extends ConsumerState<TutorialScreen> {
 
           // Tutorial Complete Overlay
           if (tutorialState.isTutorialComplete)
-            _TutorialCompleteOverlay(
+            TutorialCompleteOverlay(
               moduleId: tutorialState.moduleId,
               onNext: (nextId) {
                 if (nextId == null) {
@@ -194,123 +235,6 @@ class _TutorialScreenState extends ConsumerState<TutorialScreen> {
               },
             ),
         ],
-      ),
-    );
-  }
-}
-
-class _TutorialCompleteOverlay extends ConsumerWidget {
-  final String moduleId;
-  final Function(String?) onNext;
-
-  const _TutorialCompleteOverlay({
-    required this.moduleId,
-    required this.onNext,
-  });
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    // determine the next tutorial based on moduleId
-    String? nextId;
-    String nextName = '';
-
-    if (moduleId == 'basics') {
-      nextId = 'capturing';
-      nextName = 'Capturing';
-    } else if (moduleId == 'capturing') {
-      nextId = 'chain_reactions';
-      nextName = 'Chain Reactions';
-    } else if (moduleId == 'chain_reactions') {
-      nextId = 'edges_and_corners';
-      nextName = 'Edges and Corners';
-    } else if (moduleId == 'edges_and_corners') {
-      nextId = null;
-    }
-
-    String completeSubtitle = 'You have mastered this module!';
-    if (moduleId == 'edges_and_corners') {
-      completeSubtitle =
-          "You've mastered the high ground! Lock down corners early, use edges to flank, and let the center come to you.";
-    }
-
-    return Container(
-      color: Colors.black87,
-      child: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(32.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(
-                Icons.emoji_events_rounded,
-                color: Color(0xFFD4A44C),
-                size: 80,
-              ),
-              const SizedBox(height: 24),
-              Text(
-                'TUTORIAL COMPLETE',
-                style: GoogleFonts.outfit(
-                  color: Colors.white,
-                  fontSize: 28,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: 2,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 12),
-              Text(
-                completeSubtitle,
-                style: GoogleFonts.inter(
-                  color: Colors.white70,
-                  fontSize: 16,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 48),
-              if (nextId != null)
-                ElevatedButton(
-                  onPressed: () => onNext(nextId),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFD4A44C),
-                    foregroundColor: Colors.black,
-                    padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        'NEXT: ${nextName.toUpperCase()}',
-                        style: GoogleFonts.outfit(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 1,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      const Icon(Icons.arrow_forward_rounded, size: 20),
-                    ],
-                  ),
-                ),
-              if (nextId != null) const SizedBox(height: 16),
-              TextButton(
-                onPressed: () => onNext(null),
-                style: TextButton.styleFrom(
-                  foregroundColor: Colors.white60,
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                ),
-                child: Text(
-                  nextId == null ? 'FINISH' : 'BACK TO MENU',
-                  style: GoogleFonts.inter(
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }

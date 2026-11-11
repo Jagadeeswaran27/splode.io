@@ -1,11 +1,12 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:internet_connection_checker_plus/internet_connection_checker_plus.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import 'package:internet_connection_checker_plus/internet_connection_checker_plus.dart';
-
 import 'package:client/core/router/router_refresh_stream.dart';
+import 'package:client/domain/models/tutorial_module.dart';
 import 'package:client/presentation/auth/screens/auth_screen.dart';
+import 'package:client/presentation/game/providers/tutorial_progress_provider.dart';
 import 'package:client/presentation/game/screens/ai_difficulty_selection_screen.dart';
 import 'package:client/presentation/game/screens/profile_screen.dart';
 import 'package:client/presentation/game/screens/layout_selection_screen.dart';
@@ -93,8 +94,16 @@ final goRouterProvider = Provider<GoRouter>((ref) {
             path: 'play',
             name: 'tutorial_play',
             builder: (context, state) {
-              final moduleId = state.extra as String? ?? 'basics';
-              return TutorialScreen(moduleId: moduleId);
+              final module = state.extra is TutorialModule
+                  ? (state.extra as TutorialModule)
+                  : TutorialModule.fromId(state.extra as String?);
+              final isUnlocked = ref
+                  .read(tutorialProgressProvider.notifier)
+                  .isUnlocked(module);
+              if (!isUnlocked) {
+                return const TutorialListScreen();
+              }
+              return TutorialScreen(module: module);
             },
           ),
         ],

@@ -68,5 +68,38 @@ void main() {
       await tester.pump(const Duration(milliseconds: 100));
       expect(pressed, isTrue);
     });
+
+    testWidgets(
+        'renders without overflow on narrow viewport with high text scaling and long message',
+        (tester) async {
+      tester.view.physicalSize = const Size(360, 800);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: MediaQuery(
+            data: const MediaQueryData(
+              textScaler: TextScaler.linear(1.3),
+            ),
+            child: const Scaffold(
+              body: SizedBox(
+                height: 120,
+                child: LumiMascot(
+                  headline: 'Unleash the perimeter wave!',
+                  message:
+                      'Detonate your corner to trigger a massive cascade and sweep their defenses from behind.',
+                  stepIndex: 5,
+                  totalSteps: 6,
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      expect(tester.takeException(), isNull);
+    });
   });
 }

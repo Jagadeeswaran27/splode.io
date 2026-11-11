@@ -3,8 +3,10 @@ import 'dart:math' as math;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:client/domain/models/cell.dart';
+import 'package:client/domain/models/tutorial_module.dart';
 import 'package:client/domain/models/tutorial_step.dart';
 import 'package:client/presentation/game/providers/game_provider.dart';
+import 'package:client/presentation/game/providers/tutorial_progress_provider.dart';
 
 List<TutorialStep> getStepsForModule(String moduleId) {
   if (moduleId == 'edges_and_corners') {
@@ -238,15 +240,17 @@ List<TutorialStep> getStepsForModule(String moduleId) {
 }
 
 class TutorialState {
-  final String moduleId;
+  final TutorialModule module;
   final int stepIndex;
   final int totalSteps;
   final bool isTutorialComplete;
   final bool isProcessingMove;
   final String? feedbackMessage;
 
+  String get moduleId => module.id;
+
   const TutorialState({
-    required this.moduleId,
+    required this.module,
     required this.stepIndex,
     required this.totalSteps,
     required this.isTutorialComplete,
@@ -254,12 +258,34 @@ class TutorialState {
     this.feedbackMessage,
   });
 
+  TutorialState copyWith({
+    TutorialModule? module,
+    int? stepIndex,
+    int? totalSteps,
+    bool? isTutorialComplete,
+    bool? isProcessingMove,
+    String? feedbackMessage,
+    bool clearFeedback = false,
+  }) {
+    return TutorialState(
+      module: module ?? this.module,
+      stepIndex: stepIndex ?? this.stepIndex,
+      totalSteps: totalSteps ?? this.totalSteps,
+      isTutorialComplete: isTutorialComplete ?? this.isTutorialComplete,
+      isProcessingMove: isProcessingMove ?? this.isProcessingMove,
+      feedbackMessage: clearFeedback
+          ? null
+          : (feedbackMessage ?? this.feedbackMessage),
+    );
+  }
+
   TutorialStep? get currentStep {
-    final steps = getStepsForModule(moduleId);
+    final steps = getStepsForModule(module.id);
     if (stepIndex >= steps.length) return null;
     final baseStep = steps[stepIndex];
 
     return TutorialStep(
+      headline: baseStep.headline,
       message: feedbackMessage ?? baseStep.message,
       targetRow: isProcessingMove || feedbackMessage != null
           ? -1
@@ -276,23 +302,31 @@ class TutorialNotifier extends StateNotifier<TutorialState> {
   final Ref _ref;
 
   TutorialNotifier(this._ref)
-    : super(const TutorialState(moduleId: 'basics', stepIndex: 0, totalSteps: 1, isTutorialComplete: false));
+      : super(const TutorialState(
+          module: TutorialModule.basics,
+          stepIndex: 0,
+          totalSteps: 1,
+          isTutorialComplete: false,
+        ));
 
-  void loadModule(String moduleId) {
-    final steps = getStepsForModule(moduleId);
+  void loadModule(dynamic moduleOrId) {
+    final module = moduleOrId is TutorialModule
+        ? moduleOrId
+        : TutorialModule.fromId(moduleOrId as String?);
+    final steps = getStepsForModule(module.id);
     state = TutorialState(
-      moduleId: moduleId,
+      module: module,
       stepIndex: 0,
       totalSteps: steps.length,
       isTutorialComplete: false,
     );
-    
+
     // Set up board state if necessary
-    if (moduleId == 'capturing') {
+    if (module == TutorialModule.capturing) {
       _setupCapturingBoard();
-    } else if (moduleId == 'chain_reactions') {
+    } else if (module == TutorialModule.chainReactions) {
       _setupChainReactionBoard();
-    } else if (moduleId == 'edges_and_corners') {
+    } else if (module == TutorialModule.edgesAndCorners) {
       _setupEdgesAndCornersBoard();
     }
   }
@@ -525,50 +559,43 @@ class TutorialNotifier extends StateNotifier<TutorialState> {
   }
 
   void setProcessing(bool processing) {
-    state = TutorialState(
-      moduleId: state.moduleId,
-      stepIndex: state.stepIndex,
-      totalSteps: state.totalSteps,
-      isTutorialComplete: state.isTutorialComplete,
-      isProcessingMove: processing,
-      feedbackMessage: state.feedbackMessage,
-    );
+    state = state.copyWith(isProcessingMove: processing);
   }
 
   void setFeedback(String? message) {
-    state = TutorialState(
-      moduleId: state.moduleId,
-      stepIndex: state.stepIndex,
-      totalSteps: state.totalSteps,
-      isTutorialComplete: state.isTutorialComplete,
-      isProcessingMove: state.isProcessingMove,
+    state = state.copyWith(
       feedbackMessage: message,
+      clearFeedback: message == null,
     );
   }
 
   void advanceStep() async {
     final steps = getStepsForModule(state.moduleId);
     if (state.stepIndex >= steps.length - 1) {
-      state = TutorialState(
-        moduleId: state.moduleId,
-        stepIndex: state.stepIndex,
-        totalSteps: state.totalSteps,
+      state = state.copyWith(
         isTutorialComplete: true,
+        clearFeedback: true,
+        isProcessingMove: false,
       );
+      _ref
+          .read(tutorialProgressProvider.notifier)
+          .completeModule(state.module);
       return;
     }
 
-    state = TutorialState(
-      moduleId: state.moduleId,
+    state = state.copyWith(
       stepIndex: state.stepIndex + 1,
-      totalSteps: state.totalSteps,
       isTutorialComplete: false,
+      clearFeedback: true,
+      isProcessingMove: false,
     );
 
     // If advancing to phase 2, reset the board
-    if (state.moduleId == 'chain_reactions' && state.stepIndex == 4) {
+    if (state.module == TutorialModule.chainReactions &&
+        state.stepIndex == 4) {
       _setupWhirlpoolBoard();
-    } else if (state.moduleId == 'edges_and_corners' && state.stepIndex == 3) {
+    } else if (state.module == TutorialModule.edgesAndCorners &&
+        state.stepIndex == 3) {
       _setupPerimeterSweepBoard();
     }
 
@@ -583,24 +610,30 @@ class TutorialNotifier extends StateNotifier<TutorialState> {
     if (state.moduleId == 'chain_reactions') {
       if (stepIdx > 0 && stepIdx < 4) {
         setProcessing(true);
-        await Future.delayed(const Duration(milliseconds: 1000));
-        if (stepIdx == 1) {
-          await _ref.read(gameStateProvider.notifier).processMove(6, 1);
-        } else if (stepIdx == 2) {
-          await _ref.read(gameStateProvider.notifier).processMove(5, 1);
-        } else if (stepIdx == 3) {
-          await _ref.read(gameStateProvider.notifier).processMove(0, 5); // Safe spot that gets destroyed at the very end
+        try {
+          await Future.delayed(const Duration(milliseconds: 1000));
+          if (stepIdx == 1) {
+            await _ref.read(gameStateProvider.notifier).processMove(6, 1);
+          } else if (stepIdx == 2) {
+            await _ref.read(gameStateProvider.notifier).processMove(5, 1);
+          } else if (stepIdx == 3) {
+            await _ref.read(gameStateProvider.notifier).processMove(0, 5); // Safe spot that gets destroyed at the very end
+          }
+        } finally {
+          setProcessing(false);
         }
-        setProcessing(false);
       } else if (stepIdx > 4 && stepIdx < 7) {
         setProcessing(true);
-        await Future.delayed(const Duration(milliseconds: 1000));
-        if (stepIdx == 5) {
-          await _ref.read(gameStateProvider.notifier).processMove(4, 2);
-        } else if (stepIdx == 6) {
-          await _ref.read(gameStateProvider.notifier).processMove(3, 2);
+        try {
+          await Future.delayed(const Duration(milliseconds: 1000));
+          if (stepIdx == 5) {
+            await _ref.read(gameStateProvider.notifier).processMove(4, 2);
+          } else if (stepIdx == 6) {
+            await _ref.read(gameStateProvider.notifier).processMove(3, 2);
+          }
+        } finally {
+          setProcessing(false);
         }
-        setProcessing(false);
       }
       return;
     }
@@ -610,17 +643,20 @@ class TutorialNotifier extends StateNotifier<TutorialState> {
       // Phase 2: bot reinforces center while perimeter highway is armed
       if (stepIdx == 1 || stepIdx == 2 || stepIdx == 4 || stepIdx == 5) {
         setProcessing(true);
-        await Future.delayed(const Duration(milliseconds: 1000));
-        if (stepIdx == 1) {
-          await _ref.read(gameStateProvider.notifier).processMove(1, 2);
-        } else if (stepIdx == 2) {
-          await _ref.read(gameStateProvider.notifier).processMove(2, 2);
-        } else if (stepIdx == 4) {
-          await _ref.read(gameStateProvider.notifier).processMove(2, 2);
-        } else if (stepIdx == 5) {
-          await _ref.read(gameStateProvider.notifier).processMove(2, 3);
+        try {
+          await Future.delayed(const Duration(milliseconds: 1000));
+          if (stepIdx == 1) {
+            await _ref.read(gameStateProvider.notifier).processMove(1, 2);
+          } else if (stepIdx == 2) {
+            await _ref.read(gameStateProvider.notifier).processMove(2, 2);
+          } else if (stepIdx == 4) {
+            await _ref.read(gameStateProvider.notifier).processMove(2, 2);
+          } else if (stepIdx == 5) {
+            await _ref.read(gameStateProvider.notifier).processMove(2, 3);
+          }
+        } finally {
+          setProcessing(false);
         }
-        setProcessing(false);
       }
       return;
     }
@@ -628,22 +664,25 @@ class TutorialNotifier extends StateNotifier<TutorialState> {
     if (state.moduleId == 'capturing') {
       if (stepIdx > 0 && stepIdx < 7) {
         setProcessing(true);
-        await Future.delayed(const Duration(milliseconds: 1000));
-        
-        if (stepIdx == 1) {
-          await _ref.read(gameStateProvider.notifier).processMove(3, 5);
-        } else if (stepIdx == 2) {
-          await _ref.read(gameStateProvider.notifier).processMove(3, 5);
-        } else if (stepIdx == 3) {
-          await _ref.read(gameStateProvider.notifier).processMove(5, 5);
-        } else if (stepIdx == 4) {
-          await _ref.read(gameStateProvider.notifier).processMove(5, 5);
-        } else if (stepIdx == 5) {
-          await _ref.read(gameStateProvider.notifier).processMove(2, 4);
-        } else if (stepIdx == 6) {
-          await _ref.read(gameStateProvider.notifier).processMove(6, 4);
+        try {
+          await Future.delayed(const Duration(milliseconds: 1000));
+          
+          if (stepIdx == 1) {
+            await _ref.read(gameStateProvider.notifier).processMove(3, 5);
+          } else if (stepIdx == 2) {
+            await _ref.read(gameStateProvider.notifier).processMove(3, 5);
+          } else if (stepIdx == 3) {
+            await _ref.read(gameStateProvider.notifier).processMove(5, 5);
+          } else if (stepIdx == 4) {
+            await _ref.read(gameStateProvider.notifier).processMove(5, 5);
+          } else if (stepIdx == 5) {
+            await _ref.read(gameStateProvider.notifier).processMove(2, 4);
+          } else if (stepIdx == 6) {
+            await _ref.read(gameStateProvider.notifier).processMove(6, 4);
+          }
+        } finally {
+          setProcessing(false);
         }
-        setProcessing(false);
       }
       return;
     }
@@ -651,48 +690,54 @@ class TutorialNotifier extends StateNotifier<TutorialState> {
     // For basics module, random safe moves
     if (stepIdx > 0 && stepIdx < steps.length) {
       setProcessing(true);
-      await Future.delayed(const Duration(milliseconds: 350));
-      
-      final gameState = _ref.read(gameStateProvider);
-      final random = math.Random();
-      int row = -1;
-      int col = -1;
-      int attempts = 0;
-      
-      while (attempts < 50) {
-        final r = 6 + random.nextInt(3); // Rows 6, 7, 8
-        final c = random.nextInt(6);     // Cols 0 to 5
-        final cell = gameState.board[r][c];
+      try {
+        await Future.delayed(const Duration(milliseconds: 350));
         
-        if ((cell.ownerId == null || cell.ownerId == 'p2') && cell.orbCount < 2) {
-          row = r;
-          col = c;
-          break;
+        final gameState = _ref.read(gameStateProvider);
+        final random = math.Random();
+        int row = -1;
+        int col = -1;
+        int attempts = 0;
+        
+        while (attempts < 50) {
+          final r = 6 + random.nextInt(3); // Rows 6, 7, 8
+          final c = random.nextInt(6);     // Cols 0 to 5
+          final cell = gameState.board[r][c];
+          
+          if ((cell.ownerId == null || cell.ownerId == 'p2') && cell.orbCount < 2) {
+            row = r;
+            col = c;
+            break;
+          }
+          attempts++;
         }
-        attempts++;
-      }
-      
-      if (row == -1 || col == -1) {
-        row = 8;
-        col = 5;
-      }
+        
+        if (row == -1 || col == -1) {
+          row = 8;
+          col = 5;
+        }
 
-      await _ref.read(gameStateProvider.notifier).processMove(row, col);
-      setProcessing(false);
+        await _ref.read(gameStateProvider.notifier).processMove(row, col);
+      } finally {
+        setProcessing(false);
+      }
     }
   }
 
   void completeTutorial() {
-    state = TutorialState(
-      moduleId: state.moduleId,
-      stepIndex: state.stepIndex,
-      totalSteps: state.totalSteps,
-      isTutorialComplete: true,
-    );
+    state = state.copyWith(isTutorialComplete: true);
+    _ref
+        .read(tutorialProgressProvider.notifier)
+        .completeModule(state.module);
   }
 
   void reset() {
-    state = const TutorialState(moduleId: 'basics', stepIndex: 0, totalSteps: 1, isTutorialComplete: false);
+    state = const TutorialState(
+      module: TutorialModule.basics,
+      stepIndex: 0,
+      totalSteps: 1,
+      isTutorialComplete: false,
+    );
   }
 }
 

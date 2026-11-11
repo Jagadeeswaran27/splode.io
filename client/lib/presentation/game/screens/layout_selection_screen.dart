@@ -4,17 +4,29 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-
-import 'package:client/presentation/auth/providers/profile_provider.dart';
 import 'package:client/presentation/core/providers/audio_provider.dart';
 import 'package:client/presentation/core/providers/connectivity_provider.dart';
-import 'package:client/presentation/game/providers/bot_history_provider.dart';
+import 'package:client/presentation/core/utils/responsive_layout.dart';
 import 'package:client/presentation/core/utils/splode_snackbar.dart';
-import 'package:client/presentation/core/widgets/auth_button.dart';
 import 'package:client/presentation/core/widgets/constellation_background.dart';
+import 'package:client/presentation/core/widgets/responsive_content_container.dart';
+import 'package:client/presentation/game/providers/bot_history_provider.dart';
 import 'package:client/presentation/game/providers/game_provider.dart';
+import 'package:client/presentation/game/providers/tutorial_progress_provider.dart';
 import 'package:client/presentation/game/services/game_persistence_service.dart';
+import 'package:client/presentation/game/widgets/hub_hero_bot_card.dart';
+import 'package:client/presentation/game/widgets/hub_online_banner.dart';
+import 'package:client/presentation/game/widgets/hub_profile_header.dart';
+import 'package:client/presentation/game/widgets/hub_secondary_mode_tile.dart';
+import 'package:client/presentation/game/widgets/resume_game_dialog.dart';
 
+/// The central Tactical Command Hub screen for Splode.
+///
+/// Features:
+/// - Top HUD profile bar with BP ranking, avatar, and audio settings.
+/// - Hero combat tile for VS Bot (Ranked & Casual) with live BP incentive.
+/// - 2-column secondary split tiles for Pass & Play and Training Academy.
+/// - Bottom cyber-holographic banner for Online Multiplayer.
 class LayoutSelectionScreen extends ConsumerStatefulWidget {
   const LayoutSelectionScreen({super.key});
 
@@ -27,16 +39,10 @@ class _LayoutSelectionScreenState extends ConsumerState<LayoutSelectionScreen> {
   @override
   void initState() {
     super.initState();
-
-    // Start background music when the screen loads (if not already playing)
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
       ref.read(audioProvider).playMenuMusic();
     });
-  }
-
-  @override
-  void dispose() {
-    super.dispose();
   }
 
   Future<void> _handleGameModeSelection(bool isBotMatch) async {
@@ -47,7 +53,7 @@ class _LayoutSelectionScreenState extends ConsumerState<LayoutSelectionScreen> {
       final isSavedGameBot = savedGame.config.players.any((p) => p.isAi);
       if (isBotMatch == isSavedGameBot) {
         if (!mounted) return;
-        final resume = await _showResumeDialog(context);
+        final resume = await ResumeGameDialog.show(context);
         if (resume == true) {
           ref.read(matchConfigProvider.notifier).state = savedGame.config;
           ref.read(gameStateProvider.notifier).restoreState(savedGame.state);
@@ -68,63 +74,14 @@ class _LayoutSelectionScreenState extends ConsumerState<LayoutSelectionScreen> {
     }
   }
 
-  Future<bool?> _showResumeDialog(BuildContext context) {
-    return showDialog<bool>(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          backgroundColor: const Color(0xFF1A1A1A),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-            side: BorderSide(
-              color: const Color(0xFFD4A44C).withValues(alpha: 0.3),
-              width: 1,
-            ),
-          ),
-          title: Text(
-            'Resume Game?',
-            style: GoogleFonts.outfit(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
-          ),
-          content: Text(
-            'You have an unfinished game in progress. Would you like to resume it?',
-            style: GoogleFonts.inter(fontSize: 14, color: Colors.white70),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: Text(
-                'New Game',
-                style: GoogleFonts.inter(
-                  color: Colors.white54,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(true),
-              child: Text(
-                'Resume',
-                style: GoogleFonts.inter(
-                  color: const Color(0xFFD4A44C),
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
-    // Watch connectivity and initialize sync listener
     final isOnline = ref.watch(connectivityProvider).value ?? true;
     ref.watch(botHistorySyncProvider);
+
+    final completedModules = ref.watch(tutorialProgressProvider);
+    final earnedBp = completedModules.fold(0, (sum, m) => sum + m.bpReward);
+    final isAcademyMastered = earnedBp >= 50;
 
     return Scaffold(
       backgroundColor: const Color(0xFF111111),
@@ -134,291 +91,130 @@ class _LayoutSelectionScreenState extends ConsumerState<LayoutSelectionScreen> {
           // Background Animation
           const ConstellationBackground(),
 
-          // Foreground UI
+          // Main Hub Cards — Vertically centered to the screen irrespective of other content
           SafeArea(
-            child: Column(
-              children: [
-                // Offline Banner
-                if (!isOnline)
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    color: const Color(0xFFD4A44C).withValues(alpha: 0.9),
-                    child: Center(
-                      child: Text(
-                        'Offline Mode - Stats will sync when reconnected',
-                        style: GoogleFonts.inter(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: const Color(0xFF111111),
-                        ),
-                      ),
-                    ),
-                  ),
-                // Top Header: Minimal Profile & Audio
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 24.0,
-                    vertical: 16.0,
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            child: Center(
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                padding: EdgeInsets.fromLTRB(
+                  20.0,
+                  context.isShortScreen ? 64.0 : 16.0,
+                  20.0,
+                  16.0,
+                ),
+                child: ResponsiveContentContainer(
+                  maxWidth: SplodeBreakpoints.maxMenuWidth,
+                  alignment: Alignment.center,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      // Profile Badge (Minimal)
-                      Consumer(
-                        builder: (context, ref, child) {
-                          final profileAsync = ref.watch(userProfileProvider);
-                          return profileAsync.when(
-                            data: (profile) {
-                              if (profile == null) {
-                                return const SizedBox.shrink();
-                              }
-                              return GestureDetector(
-                                onTap: () => context.push('/profile'),
-                                behavior: HitTestBehavior.opaque,
-                                child: Row(
-                                  children: [
-                                    CircleAvatar(
-                                      radius: 18,
-                                      backgroundColor: const Color(
-                                        0xFFD4A44C,
-                                      ).withValues(alpha: 0.15),
-                                      child: Icon(
-                                        profile.isGuest
-                                            ? Icons.person_outline_rounded
-                                            : Icons.person_rounded,
-                                        color: const Color(0xFFD4A44C),
-                                        size: 18,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          profile.username,
-                                          style: GoogleFonts.outfit(
-                                            fontSize: 15,
-                                            fontWeight: FontWeight.w600,
-                                            color: Colors.white,
-                                          ),
-                                        ),
-                                        Row(
-                                          children: [
-                                            Text(
-                                              '${profile.blastPoints} BP',
-                                              style: GoogleFonts.inter(
-                                                fontSize: 12,
-                                                fontWeight: FontWeight.w700,
-                                                color: const Color(0xFFD4A44C),
-                                              ),
-                                            ),
-                                            const SizedBox(width: 4),
-                                            const Icon(
-                                              Icons.info_outline_rounded,
-                                              size: 12,
-                                              color: Colors.white38,
-                                            ),
-                                          ],
-                                        ),
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                              );
-                            },
-                            loading: () => const _SkeletonProfile(),
-                            error: (error, stack) => const SizedBox.shrink(),
-                          );
-                        },
-                      ),
-
-                      // Actions (Audio & Logout)
-                      Row(
-                        children: [
-                          Consumer(
-                            builder: (context, ref, child) {
-                              final audioCtrl = ref.watch(audioProvider);
-                              return IconButton(
-                                icon: Icon(
-                                  audioCtrl.isMuted
-                                      ? Icons.volume_off_rounded
-                                      : Icons.volume_up_rounded,
-                                  color: Colors.white70,
-                                ),
-                                onPressed: () {
-                                  ref.read(audioProvider.notifier).toggleMute();
-                                },
-                              );
-                            },
-                          ),
-                          IconButton(
-                            icon: const Icon(
-                              Icons.school_rounded,
-                              color: Colors.white70,
-                            ),
-                            onPressed: () {
-                              context.push('/tutorial');
-                            },
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-
-                const Spacer(),
-
-                // Centered Logo / Title
-                Text(
-                  'SPLODE.IO',
-                  style: GoogleFonts.outfit(
-                    fontSize: 40,
-                    fontWeight: FontWeight.w900,
-                    color: Colors.white,
-                    letterSpacing: 10,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'SELECT COMBAT MODE',
-                  style: GoogleFonts.inter(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: const Color(0xFFD4A44C),
-                    letterSpacing: 4,
-                  ),
-                ),
-                const SizedBox(height: 64),
-
-                // Minimal Game Mode Buttons
-                SizedBox(
-                  width: MediaQuery.of(context).size.width * 0.8,
-                  child: AuthButton(
-                    text: 'Offline',
-                    icon: const Icon(Icons.people_alt_rounded),
-                    style: AuthButtonStyle.secondary,
-                    onPressed: () {
-                      _handleGameModeSelection(false);
-                    },
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Opacity(
-                  opacity: isOnline ? 1.0 : 0.4,
-                  child: IgnorePointer(
-                    ignoring: !isOnline,
-                    child: SizedBox(
-                      width: MediaQuery.of(context).size.width * 0.8,
-                      child: AuthButton(
-                        text: 'Online Multiplayer',
-                        icon: Icon(
-                          isOnline
-                              ? Icons.public_rounded
-                              : Icons.wifi_off_rounded,
+                      // Centered Game Title
+                      Text(
+                        'SPLODE.IO',
+                        style: GoogleFonts.outfit(
+                          fontSize: context.isShortScreen ? 28.0 : 34.0,
+                          fontWeight: FontWeight.w900,
+                          color: Colors.white,
+                          letterSpacing: 8,
                         ),
-                        style: AuthButtonStyle.primary,
-                        onPressed: () {
+                      ),
+
+                      SizedBox(
+                        height: context.isShortScreen ? 20.0 : 28.0,
+                      ),
+
+                      // 1. Online Multiplayer (Coming Soon)
+                      HubOnlineBanner(
+                        isOnline: isOnline,
+                        onTap: () {
                           SplodeSnackbar.show(
                             context: context,
-                            message: 'Coming Soon!',
+                            message: 'Online Multiplayer coming soon!',
                             type: SnackbarType.info,
                           );
                         },
                       ),
+
+                      const SizedBox(height: 12),
+
+                      // 2. Secondary Mode Row (Pass & Play + Academy)
+                      Row(
+                        children: [
+                          // Left: Pass & Play
+                          Expanded(
+                            child: HubSecondaryModeTile(
+                              icon: Icons.people_alt_rounded,
+                              title: 'PASS & PLAY',
+                              accentColor: Colors.white,
+                              onTap: () =>
+                                  _handleGameModeSelection(false),
+                            ),
+                          ),
+
+                          const SizedBox(width: 12),
+
+                          // Right: Academy (with 50 BP Bounty Tracking)
+                          Expanded(
+                            child: HubSecondaryModeTile(
+                              icon: Icons.school_rounded,
+                              badge: isAcademyMastered
+                                  ? '✓ 50 BP'
+                                  : (earnedBp > 0
+                                      ? '$earnedBp/50 BP'
+                                      : '+50 BP'),
+                              title: 'ACADEMY',
+                              accentColor: isAcademyMastered
+                                  ? const Color(0xFFFFDF7D)
+                                  : const Color(0xFFD4A44C),
+                              onTap: () => context.push('/tutorial'),
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 12),
+
+                      // 3. Play with Bot
+                      HubHeroBotCard(
+                        onTap: () => _handleGameModeSelection(true),
+                      ),
+
+                      const SizedBox(height: 16),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+
+          // Top Floating Header & Warning Banner
+          SafeArea(
+            child: Align(
+              alignment: Alignment.topCenter,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (!isOnline)
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      color: const Color(0xFFD4A44C).withValues(alpha: 0.9),
+                      child: Center(
+                        child: Text(
+                          'Offline Mode - Stats will sync when reconnected',
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: const Color(0xFF111111),
+                          ),
+                        ),
+                      ),
                     ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                SizedBox(
-                  width: MediaQuery.of(context).size.width * 0.8,
-                  child: AuthButton(
-                    text: 'Play with Bot',
-                    icon: const Icon(Icons.smart_toy_rounded),
-                    style: AuthButtonStyle.outline,
-                    onPressed: () {
-                      _handleGameModeSelection(true);
-                    },
-                  ),
-                ),
-
-
-                const Spacer(flex: 2),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _SkeletonProfile extends StatefulWidget {
-  const _SkeletonProfile();
-
-  @override
-  State<_SkeletonProfile> createState() => _SkeletonProfileState();
-}
-
-class _SkeletonProfileState extends State<_SkeletonProfile>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1000),
-    )..repeat(reverse: true);
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return FadeTransition(
-      opacity: Tween<double>(
-        begin: 0.3,
-        end: 0.7,
-      ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut)),
-      child: Row(
-        children: [
-          Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.1),
-              shape: BoxShape.circle,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: 80,
-                height: 16,
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(4),
-                ),
+                  const HubProfileHeader(),
+                ],
               ),
-              const SizedBox(height: 6),
-              Container(
-                width: 40,
-                height: 12,
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-              ),
-            ],
+            ),
           ),
         ],
       ),

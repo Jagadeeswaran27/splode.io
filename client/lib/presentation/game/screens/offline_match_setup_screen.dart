@@ -8,9 +8,11 @@ import 'package:google_fonts/google_fonts.dart';
 
 import 'package:client/domain/models/ai_difficulty.dart';
 import 'package:client/domain/models/match_config.dart';
+import 'package:client/presentation/core/utils/responsive_layout.dart';
 import 'package:client/presentation/core/utils/splode_snackbar.dart';
 import 'package:client/presentation/core/widgets/auth_button.dart';
 import 'package:client/presentation/core/widgets/constellation_background.dart';
+import 'package:client/presentation/core/widgets/responsive_content_container.dart';
 import 'package:client/presentation/core/widgets/splode_app_bar.dart';
 import 'package:client/presentation/game/providers/game_provider.dart';
 
@@ -158,49 +160,48 @@ class _OfflineMatchSetupScreenState
         children: [
           const ConstellationBackground(),
           SafeArea(
-            child: Column(
-              children: [
-                const SizedBox(height: 24),
-                _buildSectionTitle('GRID SIZE'),
-                const SizedBox(height: 12),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                  child: _buildGridSizeSelector(),
-                ),
-                const SizedBox(height: 24),
-                _buildSectionTitle('LOBBY'),
-                const SizedBox(height: 12),
-                Expanded(
-                  child: GridView.builder(
-                    padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 2,
-                          crossAxisSpacing: 12,
-                          mainAxisSpacing: 12,
-                          childAspectRatio: 0.95,
-                        ),
-                    itemCount: _selectedGridSize == GridSizeOption.small
-                        ? 2
-                        : 4,
-                    itemBuilder: (context, index) {
-                      if (index < _playerCount) {
-                        return _buildActivePlayerCard(index);
-                      }
-                      return _buildAddPlayerCard();
-                    },
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.all(24.0),
-                  child: AuthButton(
-                    text: 'START MATCH',
-                    icon: const Icon(Icons.play_arrow_rounded),
-                    style: AuthButtonStyle.primary,
-                    onPressed: _startMatch,
-                  ),
-                ),
-              ],
+            child: context.isLandscape && context.screenWidth >= 600
+                ? _buildLandscapeLayout()
+                : _buildPortraitLayout(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPortraitLayout() {
+    return ResponsiveContentContainer(
+      maxWidth: SplodeBreakpoints.maxContentWidth,
+      child: Column(
+        children: [
+          SizedBox(height: context.isCompact ? 10 : 16),
+          _buildSectionTitle('GRID SIZE'),
+          SizedBox(height: context.isCompact ? 8 : 12),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24.0),
+            child: _buildGridSizeSelector(),
+          ),
+          SizedBox(height: context.isCompact ? 12 : 20),
+          _buildSectionTitle('LOBBY'),
+          SizedBox(height: context.isCompact ? 8 : 12),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24.0),
+              child: _buildLobbyGrid(),
+            ),
+          ),
+          Padding(
+            padding: EdgeInsets.fromLTRB(
+              24.0,
+              context.isCompact ? 8.0 : 16.0,
+              24.0,
+              context.isCompact ? 12.0 : 24.0,
+            ),
+            child: AuthButton(
+              text: 'START MATCH',
+              icon: const Icon(Icons.play_arrow_rounded),
+              style: AuthButtonStyle.primary,
+              onPressed: _startMatch,
             ),
           ),
         ],
@@ -208,46 +209,121 @@ class _OfflineMatchSetupScreenState
     );
   }
 
+  Widget _buildLandscapeLayout() {
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(
+          maxWidth: SplodeBreakpoints.maxArenaWidth,
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24.0),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SizedBox(
+                width: 300,
+                child: SingleChildScrollView(
+                  child: Column(
+                    children: [
+                      const SizedBox(height: 16),
+                      _buildSectionTitle('GRID SIZE'),
+                      const SizedBox(height: 12),
+                      _buildGridSizeSelector(),
+                      const SizedBox(height: 24),
+                      AuthButton(
+                        text: 'START MATCH',
+                        icon: const Icon(Icons.play_arrow_rounded),
+                        style: AuthButtonStyle.primary,
+                        onPressed: _startMatch,
+                      ),
+                      const SizedBox(height: 16),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(width: 24),
+              Expanded(
+                child: Column(
+                  children: [
+                    const SizedBox(height: 16),
+                    _buildSectionTitle('LOBBY'),
+                    const SizedBox(height: 12),
+                    Expanded(
+                      child: _buildLobbyGrid(),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLobbyGrid() {
+    return GridView.builder(
+      padding: EdgeInsets.zero,
+      gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
+        maxCrossAxisExtent: 240,
+        crossAxisSpacing: 12,
+        mainAxisSpacing: 12,
+        childAspectRatio: context.isCompact ? 0.78 : 0.88,
+      ),
+      itemCount: _selectedGridSize == GridSizeOption.small ? 2 : 4,
+      itemBuilder: (context, index) {
+        if (index < _playerCount) {
+          return _buildActivePlayerCard(index);
+        }
+        return _buildAddPlayerCard();
+      },
+    );
+  }
+
   Widget _buildSectionTitle(String title) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Container(
-          width: 48,
-          height: 1,
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [
-                Colors.transparent,
-                const Color(0xFFD4A44C).withValues(alpha: 0.8),
-              ],
+    return FittedBox(
+      fit: BoxFit.scaleDown,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            width: 48,
+            height: 1,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  Colors.transparent,
+                  const Color(0xFFD4A44C).withValues(alpha: 0.8),
+                ],
+              ),
             ),
           ),
-        ),
-        const SizedBox(width: 16),
-        Text(
-          title,
-          style: GoogleFonts.outfit(
-            fontSize: 14,
-            fontWeight: FontWeight.w700,
-            color: const Color(0xFFD4A44C),
-            letterSpacing: 6,
-          ),
-        ),
-        const SizedBox(width: 16),
-        Container(
-          width: 48,
-          height: 1,
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [
-                const Color(0xFFD4A44C).withValues(alpha: 0.8),
-                Colors.transparent,
-              ],
+          const SizedBox(width: 16),
+          Text(
+            title,
+            style: GoogleFonts.outfit(
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+              color: const Color(0xFFD4A44C),
+              letterSpacing: 6,
             ),
           ),
-        ),
-      ],
+          const SizedBox(width: 16),
+          Container(
+            width: 48,
+            height: 1,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  const Color(0xFFD4A44C).withValues(alpha: 0.8),
+                  Colors.transparent,
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -317,12 +393,13 @@ class _OfflineMatchSetupScreenState
   }
 
   Widget _buildActivePlayerCard(int index) {
+    final isCompact = context.isCompact;
     return ClipRRect(
       borderRadius: BorderRadius.circular(20),
       child: BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
         child: Container(
-          padding: const EdgeInsets.all(12),
+          padding: EdgeInsets.all(isCompact ? 10 : 12),
           decoration: BoxDecoration(
             color: Colors.white.withValues(alpha: 0.05),
             borderRadius: BorderRadius.circular(20),
@@ -338,8 +415,8 @@ class _OfflineMatchSetupScreenState
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Container(
-                    width: 16,
-                    height: 16,
+                    width: isCompact ? 14 : 16,
+                    height: isCompact ? 14 : 16,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       color: _selectedColors[index],
@@ -369,12 +446,12 @@ class _OfflineMatchSetupScreenState
                     ),
                 ],
               ),
-              const SizedBox(height: 8),
+              SizedBox(height: isCompact ? 6 : 8),
               TextField(
                 controller: _nameControllers[index],
                 style: GoogleFonts.outfit(
                   color: Colors.white,
-                  fontSize: 14,
+                  fontSize: isCompact ? 13 : 14,
                   fontWeight: FontWeight.w600,
                 ),
                 decoration: InputDecoration(
@@ -384,7 +461,10 @@ class _OfflineMatchSetupScreenState
                   hintText: _isAi[index]
                       ? 'Bot ${index + 1}'
                       : 'Player ${index + 1}',
-                  hintStyle: GoogleFonts.outfit(color: Colors.white38),
+                  hintStyle: GoogleFonts.outfit(
+                    color: Colors.white38,
+                    fontSize: isCompact ? 13 : 14,
+                  ),
                 ),
               ),
               if (index != 0) ...[
@@ -526,10 +606,11 @@ class _OfflineMatchSetupScreenState
               ],
               const Spacer(),
               Wrap(
-                spacing: 6,
-                runSpacing: 6,
+                spacing: isCompact ? 4 : 6,
+                runSpacing: isCompact ? 4 : 6,
                 children: kPlayerColors.map((color) {
                   final isSelected = _selectedColors[index] == color;
+                  final dotSize = isCompact ? 18.0 : 22.0;
                   return GestureDetector(
                     onTap: () {
                       setState(() {
@@ -537,8 +618,8 @@ class _OfflineMatchSetupScreenState
                       });
                     },
                     child: Container(
-                      width: 22,
-                      height: 22,
+                      width: dotSize,
+                      height: dotSize,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         color: color,

@@ -102,7 +102,7 @@ class _LumiMascotState extends State<LumiMascot> with TickerProviderStateMixin {
       child: FadeTransition(
         opacity: _fadeAnimation,
         child: Container(
-          margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+          margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(20),
             child: BackdropFilter(
@@ -110,7 +110,7 @@ class _LumiMascotState extends State<LumiMascot> with TickerProviderStateMixin {
               child: Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 14,
-                  vertical: 12,
+                  vertical: 8,
                 ),
                 decoration: BoxDecoration(
                   color: const Color(0xFF191922).withValues(alpha: 0.88),
@@ -186,98 +186,101 @@ class _LumiMascotState extends State<LumiMascot> with TickerProviderStateMixin {
 
                     // Right: Coach Dialogue Column (Header, Headline & Tactical Subtext)
                     Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          // Meta Row: LUMI tag + Step count indicator
-                          Row(
-                            children: [
-                              Text(
-                                'LUMI',
-                                style: GoogleFonts.outfit(
-                                  color: amberGold,
-                                  fontSize: 10.5,
-                                  fontWeight: FontWeight.w800,
-                                  letterSpacing: 2.5,
-                                ),
-                              ),
-                              const SizedBox(width: 6),
-                              Container(
-                                width: 3,
-                                height: 3,
-                                decoration: const BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: Colors.white24,
-                                ),
-                              ),
-                              const SizedBox(width: 6),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 6,
-                                  vertical: 1.5,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withValues(alpha: 0.05),
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                child: Text(
-                                  'STEP ${widget.stepIndex + 1} OF ${widget.totalSteps}',
-                                  style: GoogleFonts.inter(
-                                    color: Colors.white54,
-                                    fontSize: 9.5,
-                                    fontWeight: FontWeight.w700,
-                                    letterSpacing: 0.8,
+                      child: SingleChildScrollView(
+                        physics: const ClampingScrollPhysics(),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            // Meta Row: LUMI tag + Step count indicator
+                            Row(
+                              children: [
+                                Text(
+                                  'LUMI',
+                                  style: GoogleFonts.outfit(
+                                    color: amberGold,
+                                    fontSize: 10.5,
+                                    fontWeight: FontWeight.w800,
+                                    letterSpacing: 2.5,
                                   ),
+                                ),
+                                const SizedBox(width: 6),
+                                Container(
+                                  width: 3,
+                                  height: 3,
+                                  decoration: const BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: Colors.white24,
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 6,
+                                    vertical: 1.5,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withValues(alpha: 0.05),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Text(
+                                    'STEP ${widget.stepIndex + 1} OF ${widget.totalSteps}',
+                                    style: GoogleFonts.inter(
+                                      color: Colors.white54,
+                                      fontSize: 9.5,
+                                      fontWeight: FontWeight.w700,
+                                      letterSpacing: 0.8,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+
+                            const SizedBox(height: 3),
+
+                            // Tier 1: Action Command Headline (if provided)
+                            if (widget.headline != null &&
+                                widget.headline!.isNotEmpty)
+                              Text(
+                                widget.headline!,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: GoogleFonts.outfit(
+                                  color: widget.isFeedback
+                                      ? brightAmber
+                                      : Colors.white,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: 0.2,
+                                ),
+                              ),
+
+                            // Tier 2: Concise Tactical Subtext / Instruction
+                            Text(
+                              widget.message,
+                              maxLines: widget.onNextPressed != null ? 2 : 3,
+                              overflow: TextOverflow.ellipsis,
+                              style: GoogleFonts.inter(
+                                color: Colors.white.withValues(alpha: 0.78),
+                                fontSize: 12,
+                                fontWeight: FontWeight.w400,
+                                height: 1.3,
+                              ),
+                            ),
+
+                            // Action button when step requires explicit continue
+                            if (widget.onNextPressed != null) ...[
+                              const SizedBox(height: 6),
+                              Align(
+                                alignment: Alignment.centerRight,
+                                child: LumiContinueButton(
+                                  onPressed: widget.onNextPressed!,
+                                  label: widget.nextButtonLabel,
                                 ),
                               ),
                             ],
-                          ),
-
-                          const SizedBox(height: 3),
-
-                          // Tier 1: Action Command Headline (if provided)
-                          if (widget.headline != null &&
-                              widget.headline!.isNotEmpty)
-                            Text(
-                              widget.headline!,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: GoogleFonts.outfit(
-                                color: widget.isFeedback
-                                    ? brightAmber
-                                    : Colors.white,
-                                fontSize: 14,
-                                fontWeight: FontWeight.w800,
-                                letterSpacing: 0.2,
-                              ),
-                            ),
-
-                          // Tier 2: Concise Tactical Subtext / Instruction
-                          Text(
-                            widget.message,
-                            maxLines: widget.onNextPressed != null ? 2 : 3,
-                            overflow: TextOverflow.ellipsis,
-                            style: GoogleFonts.inter(
-                              color: Colors.white.withValues(alpha: 0.78),
-                              fontSize: 12,
-                              fontWeight: FontWeight.w400,
-                              height: 1.35,
-                            ),
-                          ),
-
-                          // Action button when step requires explicit continue
-                          if (widget.onNextPressed != null) ...[
-                            const SizedBox(height: 6),
-                            Align(
-                              alignment: Alignment.centerRight,
-                              child: LumiContinueButton(
-                                onPressed: widget.onNextPressed!,
-                                label: widget.nextButtonLabel,
-                              ),
-                            ),
                           ],
-                        ],
+                        ),
                       ),
                     ),
                   ],

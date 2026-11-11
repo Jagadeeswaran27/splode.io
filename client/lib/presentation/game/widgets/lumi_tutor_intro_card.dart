@@ -22,7 +22,7 @@ class LumiTutorIntroCard extends StatefulWidget {
 class _LumiTutorIntroCardState extends State<LumiTutorIntroCard>
     with TickerProviderStateMixin, AutomaticKeepAliveClientMixin {
   static const String _fullMessage =
-      "I'm your guide through Splode. Pick a module below to start learning!";
+      "I'm your guide through Splode. Complete all training modules to master tactics and earn up to +50 BP!";
 
   late final AnimationController _flightController;
   late final Animation<double> _flightAnimation;

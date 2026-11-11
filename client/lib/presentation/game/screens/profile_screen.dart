@@ -7,7 +7,9 @@ import 'package:intl/intl.dart';
 
 import 'package:client/presentation/auth/providers/auth_provider.dart';
 import 'package:client/presentation/auth/providers/profile_provider.dart';
+import 'package:client/presentation/core/utils/responsive_layout.dart';
 import 'package:client/presentation/core/widgets/constellation_background.dart';
+import 'package:client/presentation/core/widgets/responsive_content_container.dart';
 import 'package:client/presentation/core/widgets/splode_app_bar.dart';
 import 'package:client/presentation/game/providers/bot_history_provider.dart';
 import 'package:client/presentation/game/services/bot_history_service.dart';
@@ -34,48 +36,122 @@ class ProfileScreen extends ConsumerWidget {
         children: [
           const ConstellationBackground(),
           SafeArea(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SizedBox(height: 8),
-                _buildProfileSection(context, ref),
-                Padding(
-                  padding: const EdgeInsets.only(left: 32, top: 24, bottom: 8),
-                  child: Text(
-                    'BATTLE LOG',
-                    style: GoogleFonts.outfit(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white.withValues(alpha: 0.5),
-                      letterSpacing: 4,
-                    ),
-                  ),
-                ),
-                Expanded(
-                  child: historyAsync.when(
-                    data: (records) {
-                      if (records.isEmpty) {
-                        return _buildEmptyState();
-                      }
-                      return _buildTimeline(records);
-                    },
-                    loading: () => const Center(
-                      child: CircularProgressIndicator(
-                        color: Color(0xFFD4A44C),
-                      ),
-                    ),
-                    error: (err, stack) => Center(
-                      child: Text(
-                        'Failed to load history',
-                        style: GoogleFonts.inter(color: Colors.white54),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
+            child: context.isLandscape && context.screenWidth >= 600
+                ? _buildLandscapeLayout(context, ref, historyAsync)
+                : _buildPortraitLayout(context, ref, historyAsync),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildPortraitLayout(
+    BuildContext context,
+    WidgetRef ref,
+    AsyncValue<List<BotMatchRecord>> historyAsync,
+  ) {
+    return ResponsiveContentContainer(
+      maxWidth: SplodeBreakpoints.maxContentWidth,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SizedBox(height: 8),
+          _buildProfileSection(context, ref),
+          Padding(
+            padding: const EdgeInsets.only(left: 32, top: 24, bottom: 8),
+            child: Text(
+              'BATTLE LOG',
+              style: GoogleFonts.outfit(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                color: Colors.white.withValues(alpha: 0.5),
+                letterSpacing: 4,
+              ),
+            ),
+          ),
+          Expanded(
+            child: _buildHistoryContent(historyAsync),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLandscapeLayout(
+    BuildContext context,
+    WidgetRef ref,
+    AsyncValue<List<BotMatchRecord>> historyAsync,
+  ) {
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(
+          maxWidth: SplodeBreakpoints.maxArenaWidth,
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SizedBox(
+                width: 320,
+                child: SingleChildScrollView(
+                  child: _buildProfileSection(context, ref),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.only(
+                        left: 12,
+                        top: 12,
+                        bottom: 8,
+                      ),
+                      child: Text(
+                        'BATTLE LOG',
+                        style: GoogleFonts.outfit(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white.withValues(alpha: 0.5),
+                          letterSpacing: 4,
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      child: _buildHistoryContent(historyAsync),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHistoryContent(
+    AsyncValue<List<BotMatchRecord>> historyAsync,
+  ) {
+    return historyAsync.when(
+      data: (records) {
+        if (records.isEmpty) {
+          return _buildEmptyState();
+        }
+        return _buildTimeline(records);
+      },
+      loading: () => const Center(
+        child: CircularProgressIndicator(
+          color: Color(0xFFD4A44C),
+        ),
+      ),
+      error: (err, stack) => Center(
+        child: Text(
+          'Failed to load history',
+          style: GoogleFonts.inter(color: Colors.white54),
+        ),
       ),
     );
   }

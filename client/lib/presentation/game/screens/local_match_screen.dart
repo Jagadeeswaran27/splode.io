@@ -6,8 +6,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import 'package:client/domain/models/game_state.dart';
 import 'package:client/domain/models/match_config.dart';
 import 'package:client/presentation/core/providers/audio_provider.dart';
+import 'package:client/presentation/core/utils/responsive_layout.dart';
 import 'package:client/presentation/core/widgets/auth_button.dart';
 import 'package:client/presentation/core/widgets/splode_app_bar.dart';
 import 'package:client/presentation/game/providers/game_provider.dart';
@@ -195,128 +197,19 @@ class _LocalMatchScreenState extends ConsumerState<LocalMatchScreen>
             ),
 
             // Game Content
-            Column(
-              children: [
-                // Turn Indicator (Fixed height to prevent layout shifts, fades out on Game Over)
-                SizedBox(
-                  height: 110,
-                  child: AnimatedOpacity(
-                    duration: const Duration(milliseconds: 500),
-                    opacity: viewedState.isGameOver ? 0.0 : 1.0,
-                    child: Center(
-                      child: Builder(
-                        builder: (context) {
-                          final currentPlayerConfig = getPlayerConfig(
-                            viewedState.currentPlayer,
-                          );
-                          return Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 24,
-                              vertical: 12,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.05),
-                              borderRadius: BorderRadius.circular(30),
-                              border: Border.all(
-                                color: currentPlayerConfig.color.withValues(
-                                  alpha: 0.3,
-                                ),
-                                width: 1.5,
-                              ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: currentPlayerConfig.color.withValues(
-                                    alpha: 0.15,
-                                  ),
-                                  blurRadius: 12,
-                                ),
-                              ],
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                if (currentPlayerConfig.isAi)
-                                  Container(
-                                    padding: const EdgeInsets.all(6),
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      color: currentPlayerConfig.color
-                                          .withValues(alpha: 0.2),
-                                    ),
-                                    child: Icon(
-                                      Icons.smart_toy_rounded,
-                                      size: 16,
-                                      color: currentPlayerConfig.color,
-                                    ),
-                                  )
-                                else
-                                  Container(
-                                    width: 12,
-                                    height: 12,
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      color: currentPlayerConfig.color,
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: currentPlayerConfig.color
-                                              .withValues(alpha: 0.6),
-                                          blurRadius: 8,
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                const SizedBox(width: 16),
-                                Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      currentPlayerConfig.isAi
-                                          ? 'BOT THINKING...'
-                                          : 'CURRENT TURN',
-                                      style: GoogleFonts.inter(
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.w700,
-                                        color: Colors.white54,
-                                        letterSpacing: 2,
-                                      ),
-                                    ),
-                                    Text(
-                                      currentPlayerConfig.name,
-                                      style: GoogleFonts.outfit(
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.bold,
-                                        color: currentPlayerConfig.color,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          );
-                        },
-                      ),
-                    ),
+            context.isLandscape && context.screenWidth >= 600
+                ? _buildLandscapeGameContent(
+                    liveState,
+                    viewedState,
+                    matchConfig,
+                    getPlayerConfig,
+                  )
+                : _buildPortraitGameContent(
+                    liveState,
+                    viewedState,
+                    matchConfig,
+                    getPlayerConfig,
                   ),
-                ),
-                Expanded(
-                  child: GameBoardWidget(
-                    gameState: viewedState,
-                    matchConfig: matchConfig,
-                    onCellTapped: (row, col) {
-                      if (liveState.turnCount != viewedState.turnCount ||
-                          liveState.isGameOver) {
-                        return;
-                      }
-                      ref
-                          .read(gameStateProvider.notifier)
-                          .processMove(row, col);
-                    },
-                  ),
-                ),
-                const _PlaybackControls(),
-              ],
-            ),
             if (liveState.isGameOver && viewedState.isGameOver) ...[
               Positioned.fill(
                 child: TweenAnimationBuilder<double>(
@@ -346,30 +239,32 @@ class _LocalMatchScreenState extends ConsumerState<LocalMatchScreen>
                     final titleText = isBotWin ? 'DEFEAT' : 'VICTORY';
 
                     return Center(
-                      child: Transform.scale(
-                        scale: value.clamp(0.0, double.infinity),
-                        child: Container(
-                          margin: const EdgeInsets.symmetric(horizontal: 32),
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(32),
-                            boxShadow: [
-                              BoxShadow(
-                                color: winnerConfig.color.withValues(
-                                  alpha: 0.15,
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 420),
+                        child: Transform.scale(
+                          scale: value.clamp(0.0, double.infinity),
+                          child: Container(
+                            margin: const EdgeInsets.symmetric(horizontal: 24),
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(32),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: winnerConfig.color.withValues(
+                                    alpha: 0.15,
+                                  ),
+                                  blurRadius: 40,
                                 ),
-                                blurRadius: 40,
-                              ),
-                            ],
-                          ),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(32),
-                            child: BackdropFilter(
-                              filter: dart_ui.ImageFilter.blur(
-                                sigmaX: 16,
-                                sigmaY: 16,
-                              ),
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
+                              ],
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(32),
+                              child: BackdropFilter(
+                                filter: dart_ui.ImageFilter.blur(
+                                  sigmaX: 16,
+                                  sigmaY: 16,
+                                ),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
                                   horizontal: 32,
                                   vertical: 32,
                                 ),
@@ -419,7 +314,8 @@ class _LocalMatchScreenState extends ConsumerState<LocalMatchScreen>
                           ),
                         ),
                       ),
-                    );
+                    ),
+                  );
                   },
                 ),
               ),
@@ -461,6 +357,186 @@ class _LocalMatchScreenState extends ConsumerState<LocalMatchScreen>
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildPortraitGameContent(
+    GameState liveState,
+    GameState viewedState,
+    MatchConfig matchConfig,
+    PlayerConfig Function(String) getPlayerConfig,
+  ) {
+    return Column(
+      children: [
+        _buildTurnIndicator(viewedState, getPlayerConfig),
+        Expanded(
+          child: _buildGameBoard(liveState, viewedState, matchConfig),
+        ),
+        const _PlaybackControls(),
+      ],
+    );
+  }
+
+  Widget _buildLandscapeGameContent(
+    GameState liveState,
+    GameState viewedState,
+    MatchConfig matchConfig,
+    PlayerConfig Function(String) getPlayerConfig,
+  ) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          // Left HUD Panel
+          SizedBox(
+            width: 260,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _buildTurnIndicator(viewedState, getPlayerConfig),
+                  const SizedBox(height: 16),
+                  const _PlaybackControls(),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(width: 16),
+          // Right Maximized Game Board
+          Expanded(
+            child: _buildGameBoard(liveState, viewedState, matchConfig),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTurnIndicator(
+    GameState viewedState,
+    PlayerConfig Function(String) getPlayerConfig,
+  ) {
+    return SizedBox(
+      height: context.isShortScreen ? 76.0 : 96.0,
+      child: AnimatedOpacity(
+        duration: const Duration(milliseconds: 500),
+        opacity: viewedState.isGameOver ? 0.0 : 1.0,
+        child: Center(
+          child: Builder(
+            builder: (context) {
+              final currentPlayerConfig = getPlayerConfig(
+                viewedState.currentPlayer,
+              );
+              return Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 10,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.05),
+                  borderRadius: BorderRadius.circular(30),
+                  border: Border.all(
+                    color: currentPlayerConfig.color.withValues(
+                      alpha: 0.3,
+                    ),
+                    width: 1.5,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: currentPlayerConfig.color.withValues(
+                        alpha: 0.15,
+                      ),
+                      blurRadius: 12,
+                    ),
+                  ],
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (currentPlayerConfig.isAi)
+                      Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: currentPlayerConfig.color.withValues(
+                            alpha: 0.2,
+                          ),
+                        ),
+                        child: Icon(
+                          Icons.smart_toy_rounded,
+                          size: 16,
+                          color: currentPlayerConfig.color,
+                        ),
+                      )
+                    else
+                      Container(
+                        width: 12,
+                        height: 12,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: currentPlayerConfig.color,
+                          boxShadow: [
+                            BoxShadow(
+                              color: currentPlayerConfig.color.withValues(
+                                alpha: 0.6,
+                              ),
+                              blurRadius: 8,
+                            ),
+                          ],
+                        ),
+                      ),
+                    const SizedBox(width: 14),
+                    Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          currentPlayerConfig.isAi
+                              ? 'BOT THINKING...'
+                              : 'CURRENT TURN',
+                          style: GoogleFonts.inter(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white54,
+                            letterSpacing: 2,
+                          ),
+                        ),
+                        Text(
+                          currentPlayerConfig.name,
+                          style: GoogleFonts.outfit(
+                            fontSize: 17,
+                            fontWeight: FontWeight.bold,
+                            color: currentPlayerConfig.color,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildGameBoard(
+    GameState liveState,
+    GameState viewedState,
+    MatchConfig matchConfig,
+  ) {
+    return GameBoardWidget(
+      gameState: viewedState,
+      matchConfig: matchConfig,
+      onCellTapped: (row, col) {
+        if (liveState.turnCount != viewedState.turnCount ||
+            liveState.isGameOver) {
+          return;
+        }
+        ref.read(gameStateProvider.notifier).processMove(row, col);
+      },
     );
   }
 }
@@ -660,61 +736,64 @@ class _PlaybackControls extends ConsumerWidget {
             width: 1.5,
           ),
         ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            IconButton(
-              icon: Icon(
-                Icons.skip_previous_rounded,
-                color: canGoBack ? Colors.white70 : Colors.white24,
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              IconButton(
+                icon: Icon(
+                  Icons.skip_previous_rounded,
+                  color: canGoBack ? Colors.white70 : Colors.white24,
+                ),
+                onPressed: canGoBack
+                    ? () => ref.read(gameStateProvider.notifier).jumpToStart()
+                    : null,
               ),
-              onPressed: canGoBack
-                  ? () => ref.read(gameStateProvider.notifier).jumpToStart()
-                  : null,
-            ),
-            IconButton(
-              icon: Icon(
-                Icons.navigate_before_rounded,
-                color: canGoBack ? Colors.white : Colors.white24,
+              IconButton(
+                icon: Icon(
+                  Icons.navigate_before_rounded,
+                  color: canGoBack ? Colors.white : Colors.white24,
+                ),
+                onPressed: canGoBack
+                    ? () => ref.read(gameStateProvider.notifier).stepBackward()
+                    : null,
               ),
-              onPressed: canGoBack
-                  ? () => ref.read(gameStateProvider.notifier).stepBackward()
-                  : null,
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Text(
-                lastMove != null
-                    ? 'T${lastMove.turnNumber}: ${lastMove.toAlgebraic()}'
-                    : 'Start',
-                style: GoogleFonts.outfit(
-                  color: isLatest ? Colors.white : const Color(0xFFD4A44C),
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                  letterSpacing: 1,
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Text(
+                  lastMove != null
+                      ? 'T${lastMove.turnNumber}: ${lastMove.toAlgebraic()}'
+                      : 'Start',
+                  style: GoogleFonts.outfit(
+                    color: isLatest ? Colors.white : const Color(0xFFD4A44C),
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                    letterSpacing: 1,
+                  ),
                 ),
               ),
-            ),
-            IconButton(
-              icon: Icon(
-                Icons.navigate_next_rounded,
-                color: canGoForward ? Colors.white : Colors.white24,
+              IconButton(
+                icon: Icon(
+                  Icons.navigate_next_rounded,
+                  color: canGoForward ? Colors.white : Colors.white24,
+                ),
+                onPressed: canGoForward
+                    ? () => ref.read(gameStateProvider.notifier).stepForward()
+                    : null,
               ),
-              onPressed: canGoForward
-                  ? () => ref.read(gameStateProvider.notifier).stepForward()
-                  : null,
-            ),
-            IconButton(
-              icon: Icon(
-                Icons.skip_next_rounded,
-                color: canGoForward ? Colors.white70 : Colors.white24,
+              IconButton(
+                icon: Icon(
+                  Icons.skip_next_rounded,
+                  color: canGoForward ? Colors.white70 : Colors.white24,
+                ),
+                onPressed: canGoForward
+                    ? () => ref.read(gameStateProvider.notifier).jumpToLatest()
+                    : null,
               ),
-              onPressed: canGoForward
-                  ? () => ref.read(gameStateProvider.notifier).jumpToLatest()
-                  : null,
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
